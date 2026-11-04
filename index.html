@@ -251,7 +251,7 @@ details.fold.inline .fb{padding:6px 0 0}
 .acct .nm{flex:1;min-width:0;font-weight:600}
 .acct .nm .sub{display:block;font-weight:400;font-size:.82rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .acct .amt{font-weight:700;font-size:1.08rem;white-space:nowrap}
-.acct.net{cursor:default}.acct.net .nm{padding-left:22px;color:var(--muted)}
+.acct.net{cursor:default}.acct.net .nm{font-weight:700}
 .good{color:var(--good)}.bad{color:var(--red)}.warnc{color:var(--mustard)}
 .rows .r.good{color:var(--good)}
 .chart .zero{stroke:var(--red);stroke-width:1;stroke-dasharray:4 4;opacity:.7}
@@ -259,6 +259,52 @@ details.fold.inline .fb{padding:6px 0 0}
 .chart .dot.pd{fill:var(--surface);stroke:var(--pine);stroke-width:2}
 .chart .base{fill:none;stroke:var(--muted);stroke-width:1.5;stroke-dasharray:5 5;opacity:.7}
 .legend.two{grid-template-columns:1fr 1fr;column-gap:16px}
+.btns.three{display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:8px}.btns.three .btn{padding-left:6px;padding-right:6px;white-space:nowrap}
+.mswitch{display:flex;align-items:center;justify-content:space-between;margin:0 0 12px;font-weight:700;font-size:1.05rem}
+.mswitch .icon{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:1.4rem;line-height:1;cursor:pointer}
+.mswitch .icon:disabled{opacity:.3;cursor:default}
+.sumrow{display:flex;gap:16px;align-items:center}
+.donutwrap{position:relative;width:118px;height:118px;flex:none}
+.donut{width:100%;height:100%}
+.donutwrap .mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.donutwrap .mid strong{font-size:1.2rem}
+.sumrow .legend{flex:1;min-width:0;margin:0}
+.sumrow .legend li{font-size:.88rem}
+.sumrow .legend .ln,.flow .ln{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.leftline{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.meter{position:relative}
+.meter .today{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);opacity:.55;border-radius:2px}
+.txlist button.tx{gap:12px;padding:11px 0;border-top:1px solid var(--line);cursor:pointer}
+.dayhead + button.tx{border-top:0}
+.tx .av{width:36px;height:36px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:.95rem}
+.tx .d .nm{font-weight:600}
+.dayhead{font-size:.82rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);padding:16px 0 4px;border-top:0}
+.split.tall{height:16px;margin:12px 0 8px}
+.flow{list-style:none;padding:0;margin:0}
+.flow li{display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
+.flow li:first-child{border-top:0}
+.flow .sw{width:12px;height:12px;border-radius:4px;flex:none}
+.flow .amt{white-space:nowrap;font-weight:600}
+.h2sub{font-size:.85rem;font-weight:500;color:var(--muted);margin-left:6px}
+.bill{padding:12px 0}
+.bill .tick{position:relative;flex:none;width:28px;height:28px;margin:0}
+.bill .tick input{position:absolute;opacity:0;inset:0;width:100%;height:100%;margin:0;cursor:pointer}
+.bill .tick span{display:block;width:26px;height:26px;border-radius:50%;border:2px solid var(--line);transition:background .2s,border-color .2s}
+.bill .tick input:checked + span{background:var(--good);border-color:var(--good)}
+.bill .tick input:checked + span::after{content:"";display:block;width:7px;height:12px;border:solid #fff;border-width:0 2.5px 2.5px 0;transform:translate(8px,4px) rotate(45deg)}
+.bill .tick input:focus-visible + span{outline:2px solid var(--pine);outline-offset:2px}
+.billbtn{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.billbtn .name{font-weight:600}
+.bill.done .billbtn .name{text-decoration:line-through;color:var(--muted)}
+.bill .amt{font-weight:600;white-space:nowrap}
+.catbtn{display:block;width:100%;background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.catbtn:first-child .cat{border-top:0}
+.goal{padding:10px 0;border-top:1px solid var(--line)}
+.goal:first-child{border-top:0;padding-top:0}
+.goal .top{display:flex;justify-content:space-between;gap:10px}
+.goal .row{margin-top:6px}
+.acct .ic.net-good{background:var(--good)}.acct .ic.net-bad{background:var(--red)}
+@media (prefers-reduced-motion: no-preference){ .enter .donut circle{animation:fadein .8s ease both} }
 .legend.two li{font-size:.86rem;min-width:0}
 .legend.two .ln{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dlist{list-style:none;padding:0;margin:4px 0 0}
@@ -782,7 +828,7 @@ function renderOverview(){
     <button class="acct" data-tab="budget"><span class="ic good"></span><span class="nm">Chequing<span class="sub">${cq ? esc(state.chequing.name) : 'Add your balance'}</span></span><span class="amt num good" ${cq ? `data-count="${cq.bal.toFixed(2)}"` : ''}>${cq ? fmt.format(cq.bal) : '—'}</span></button>
     <button class="acct" data-tab="budget"><span class="ic good"></span><span class="nm">Savings<span class="sub">Emergency fund${(state.goals || []).length ? ' and goals' : ''}</span></span><span class="amt num good" data-count="${saved.toFixed(2)}">${fmt.format(saved)}</span></button>
     <button class="acct" data-tab="debts"><span class="ic bad"></span><span class="nm">Debt<span class="sub">${shown.length} account${shown.length === 1 ? '' : 's'}${totalInt > 0.5 ? `, ${fmt0.format(totalInt)}/mo interest` : ''}</span></span><span class="amt num bad" data-count="${owe.toFixed(2)}">−${fmt.format(owe)}</span></button>
-    <div class="acct net"><span class="nm">Net worth<span class="sub">${sim.allFree ? `Debt-free by ${mLabel(sim.allFree)}` : 'What you have minus what you owe'}</span></span><span class="amt num ${(cq ? cq.bal : 0) + saved - owe >= 0 ? 'good' : 'bad'}">${fmtSigned((cq ? cq.bal : 0) + saved - owe)}</span></div>
+    <div class="acct net"><span class="ic ${(cq ? cq.bal : 0) + saved - owe >= 0 ? 'net-good' : 'net-bad'}"></span><span class="nm">Net worth<span class="sub">${sim.allFree ? `Debt-free by ${mLabel(sim.allFree)}` : 'What you have minus what you owe'}</span></span><span class="amt num ${(cq ? cq.bal : 0) + saved - owe >= 0 ? 'good' : 'bad'}">${fmtSigned((cq ? cq.bal : 0) + saved - owe)}</span></div>
   </div>`;
 
   /* 4. The next 30 days */
@@ -878,7 +924,7 @@ function progressFolds(){
     <p class="small muted" style="margin-top:8px">${sim.allFree ? `Debt-free in ${mLabel(sim.allFree)} at ${fmt.format(n(state.extra))} extra a month. Change that with the slider above.` : 'At this pace the debt doesn’t clear. Find more room with the slider above or in Budget.'}</p>`);
   return h;
 }
-function moneyFolds(){
+function moneyFolds(skipSave){
   let h = '';
   if (state.chequing){
     const c = state.chequing;
@@ -895,7 +941,7 @@ function moneyFolds(){
       ${upcomingPanel()}`);
   }
 
-  {
+  if (!skipSave) {
     const sv = state.savings || {goal:1000, balance:0};
     const pct = n(sv.goal) ? Math.min(100, n(sv.balance) / n(sv.goal) * 100) : 0;
     const goals = state.goals || [];
@@ -977,33 +1023,58 @@ function renderBudget(){
   const nPaid = fixedList.filter(b => checks[b.id]).length;
   const w = v => incThis ? Math.max(0, Math.min(100, v / incThis * 100)) : 0;
 
-  let h = `<div class="panel move" style="margin-top:0"><p class="muted small">Extra money this month for debt or savings</p>
-    <div class="big-result num" data-count="${Math.abs(leftover).toFixed(2)}" style="color:${leftover < 0 ? 'var(--red)' : 'var(--pine)'}">${leftover < 0 ? '−' : ''}${fmt.format(Math.abs(leftover))}</div>
-    <div class="split" role="img" aria-label="Where this month’s income goes"><span style="width:${w(fixedB)}%;background:var(--c5)"></span><span style="width:${w(bills - fixedB)}%;background:var(--c3)"></span><span style="width:${w(minsB)}%;background:var(--c2)"></span><span style="width:${w(Math.max(0, leftover))}%;background:var(--pine)"></span></div>
-    <ul class="rows" style="margin-top:6px">
-    <li><span>Income (${incThis / (n(state.income.perCheque) || 1)} paycheques)</span><span class="r">${fmt.format(incThis)}</span></li>
-    <li><span><span class="sw-inline" style="background:var(--c5)"></span>Rent and fixed bills</span><span class="r">−${fmt.format(fixedB)}</span></li>
-    <li><span><span class="sw-inline" style="background:var(--c3)"></span>Everyday budgets</span><span class="r">−${fmt.format(bills - fixedB)}</span></li>
-    <li><span><span class="sw-inline" style="background:var(--c2)"></span>Automatic debt payments</span><span class="r">−${fmt.format(minsB)}</span></li>
-  </ul></div>`;
+  const spentBy = {}; state.tx.filter(t => t.date.slice(0,7) === key).forEach(t => spentBy[t.cat] = (spentBy[t.cat] || 0) + t.amount);
+  const everydayTotal = bills - fixedB;
+  const flow = [
+    {l:'Rent and fixed bills', v:fixedB, c:'var(--c5)'},
+    {l:'Everyday budgets', v:everydayTotal, c:'var(--c3)'},
+    {l:'Debt payments', v:minsB, c:'var(--c2)'},
+    {l: leftover >= 0 ? 'Left for debt or savings' : 'Short this month', v:Math.abs(leftover), c: leftover >= 0 ? 'var(--good)' : 'var(--red)'}
+  ];
 
-  h += `<div class="folds">`;
-  h += fold('checklist', `${new Date().toLocaleDateString('en-CA',{month:'long'})} bills`, `${nPaid} of ${fixedList.length} paid`,
-    `<div class="pbar" style="height:10px;margin-top:2px" role="progressbar" aria-label="Bills paid" aria-valuenow="${allFixed ? Math.round(paidFixed/allFixed*100) : 0}" aria-valuemin="0" aria-valuemax="100"><i style="width:${allFixed ? paidFixed/allFixed*100 : 0}%"></i></div>
-    <p class="small muted" style="margin-bottom:6px">${fmt.format(paidFixed)} of ${fmt.format(allFixed)} paid. Automatic ones tick themselves.</p>
-    ${fixedList.length ? fixedList.map(b => `<div class="bill ${checks[b.id] ? 'done' : ''}">
-      <input type="checkbox" data-check="${b.id}" ${checks[b.id] ? 'checked' : ''} aria-label="Paid: ${esc(b.name)}">
-      <span class="name">${esc(b.name)}<br><span class="small muted">${b.source === 'card' ? 'Card' : 'Chequing'}${b.payDay ? `, auto on day ${b.payDay}` : ''}${b.dueDate && b.dueDate >= isoDay(today()) ? `, auto ${new Date(b.dueDate + 'T12:00:00').toLocaleDateString('en-CA',{month:'short',day:'numeric'})}` : ''}${b.fromEmail ? ', from email' : ''}</span></span>
-      <span class="amt">${fmt.format(n(b.amount))}</span><button class="edit" data-edit-bill="${b.id}">Edit</button></div>`).join('') : '<p class="muted">No fixed bills yet.</p>'}
-    <div class="btns"><button class="btn small" data-act="add-bill">Add a bill or budget</button><button class="btn small" data-act="bill-sync">Check bill emails</button></div>
-    ${billNote ? `<p class="hint">${esc(billNote)}</p>` : ''}`);
-  h += fold('b-everyday', 'Everyday budgets', fmt0.format(sum(everydayList, b => n(b.amount))) + ' a month',
-    `<p class="small muted">How much you plan to spend. Your spending fills these bars in Spend.</p><ul class="rows">${everydayList.map(b => `<li><span>${esc(b.name)}</span><span class="r">${fmt.format(n(b.amount))} <button class="edit" data-edit-bill="${b.id}">Edit</button></span></li>`).join('')}</ul>`);
+  /* 1. The month in one picture: where each paycheque goes */
+  let h = `<div class="panel" style="margin-top:0"><p class="muted small">${new Date().toLocaleDateString('en-CA',{month:'long'})} income, ${incThis / (n(state.income.perCheque) || 1)} paycheques</p>
+    <div class="big-result num" data-count="${incThis.toFixed(2)}">${fmt.format(incThis)}</div>
+    <div class="split tall" role="img" aria-label="Where this month’s income goes">${flow.slice(0, leftover >= 0 ? 4 : 3).map(f => `<span style="width:${w(f.v)}%;background:${f.c}"></span>`).join('')}</div>
+    <ul class="flow">${flow.map(f => `<li><span class="sw" style="background:${f.c}"></span><span class="ln">${f.l}</span><span class="amt num ${f.l.startsWith('Left') ? 'good' : f.l.startsWith('Short') ? 'bad' : ''}">${f.l.startsWith('Left') || f.l.startsWith('Short') ? fmtSigned(leftover) : fmt.format(f.v)}</span></li>`).join('')}</ul></div>`;
+
+  /* 2. Bills this month: tick them off */
+  h += `<h2>${new Date().toLocaleDateString('en-CA',{month:'long'})} bills <span class="h2sub">${nPaid} of ${fixedList.length} paid</span></h2><div class="panel">
+    <div class="meter" role="progressbar" aria-label="Bills paid" aria-valuenow="${allFixed ? Math.round(paidFixed/allFixed*100) : 0}" aria-valuemin="0" aria-valuemax="100" style="margin-top:0"><i style="width:${allFixed ? paidFixed/allFixed*100 : 0}%;background:var(--good)"></i></div>
+    <p class="small muted">${fmt.format(paidFixed)} of ${fmt.format(allFixed)} paid. Automatic ones tick themselves.</p>
+    ${fixedList.length ? fixedList.slice().sort((a,b) => (!!checks[a.id] - !!checks[b.id]) || ((a.payDay || 99) - (b.payDay || 99))).map(b => `<div class="bill ${checks[b.id] ? 'done' : ''}">
+      <label class="tick"><input type="checkbox" data-check="${b.id}" ${checks[b.id] ? 'checked' : ''} aria-label="Paid: ${esc(b.name)}"><span></span></label>
+      <button class="billbtn" data-edit-bill="${b.id}"><span class="name">${esc(b.name)}</span><span class="small muted">${b.payDay ? `Day ${b.payDay}` : b.dueDate ? 'Due ' + dayLabel(b.dueDate) : 'No date'} · ${b.source === 'card' ? 'on card' : 'chequing'}${b.payDay || b.dueDate ? ', auto' : ''}</span></button>
+      <span class="amt num">${fmt.format(n(b.amount))}</span></div>`).join('') : '<p class="muted">No fixed bills yet.</p>'}
+    <div class="btns"><button class="btn small" data-act="add-bill">+ Add a bill or budget</button><button class="btn small" data-act="bill-sync">Check bill emails</button></div>
+    ${billNote ? `<p class="hint">${esc(billNote)}</p>` : ''}
+    <p class="small muted" style="margin-top:6px">Tap a bill to edit it.</p></div>`;
+
+  /* 3. Everyday budgets, filled by this month's spending */
+  h += `<h2>Everyday budgets <span class="h2sub">${fmt0.format(sum(everydayList, b => n(b.amount)))} a month</span></h2><div class="panel">${everydayList.length ? everydayList.map(b => `<button class="catbtn" data-edit-bill="${b.id}">${catRow(b.name, spentBy[b.id] || 0, n(b.amount))}</button>`).join('') : '<p class="muted">No budgets yet.</p>'}
+    <p class="small muted" style="margin-top:6px">Tap a budget to change the amount.</p></div>`;
+
+  /* 4. Savings goals */
+  {
+    const sv = state.savings || {goal:1000, balance:0};
+    const goals = [{id:null, name:'Emergency fund', balance:n(sv.balance), goal:n(sv.goal)}, ...(state.goals || [])];
+    h += `<h2>Savings <span class="h2sub">${fmt0.format(sum(goals, g => n(g.balance)))} saved</span></h2><div class="panel">${goals.map(g => {
+      const gp = n(g.goal) ? Math.min(100, n(g.balance) / n(g.goal) * 100) : 0;
+      return `<div class="goal"><div class="top"><span><strong>${esc(g.name)}</strong></span><span class="num">${fmt0.format(n(g.balance))} <span class="muted small">of ${fmt0.format(n(g.goal))}</span></span></div>
+        <div class="meter"><i style="width:${gp}%;background:var(--good)"></i></div>
+        <div class="row"><span class="small muted">${gp >= 100 ? 'Goal reached' : fmt.format(n(g.goal) - n(g.balance)) + ' to go'}</span>
+        <span class="btns" style="margin:0">${g.id ? `<button class="btn small" data-act="goal-add" data-gid="${g.id}">Add</button><button class="btn small" data-act="goal-use" data-gid="${g.id}">Use</button>` : `<button class="btn small" data-act="sv-add">Add</button><button class="btn small" data-act="sv-use">Use</button><button class="btn small" data-act="sv-goal">Goal</button>`}</span></div></div>`;
+    }).join('')}</div>`;
+  }
+
+  /* 5. Settings and detail, folded */
+  h += `<h2>More</h2><div class="folds" style="margin-top:0">`;
   h += fold('b-income', 'Income', n(state.income.perCheque) ? `${fmt.format(n(state.income.perCheque))} every 2 weeks` : 'not set',
     `<div class="grid2">
     <div><label for="perCheque">Each paycheque</label><input id="perCheque" type="number" inputmode="decimal" step="0.01" value="${n(state.income.perCheque) || ''}"></div>
     <div><label for="payday">Next payday</label><input id="payday" type="date" value="${esc(state.income.nextPayday)}"></div></div>
     <p class="hint">${state.income.nextPayday ? (next12.length ? `3-paycheque months in the next year: ${next12.map(mLabel).join(', ')}.` : 'No 3-paycheque months in the next year.') : 'Add your next payday to spot the months with a third paycheque.'}</p>`);
+  h += moneyFolds(true);
   if ((state.recurring || []).length) h += fold('b-subs', 'Automatic subscriptions', fmt.format(sum(state.recurring, r => n(r.amount))) + ' a month',
     `<ul class="rows">${state.recurring.map(r => `<li><span>${esc(r.name)}<br><span class="small muted">Day ${r.payDay}</span></span><span class="r">${fmt.format(n(r.amount))}</span></li>`).join('')}</ul><p class="small muted" style="margin-top:8px">Charged to your card on these days and counted in Subscriptions.</p>`);
   h += fold('b-left', 'Typical months', `${fmt0.format(two - bills)} left in a 2-cheque month`,
@@ -1014,7 +1085,6 @@ function renderBudget(){
     <li><span>Left in a 2-paycheque month</span><span class="r"><strong>${fmt.format(two - bills)}</strong></span></li>
     <li><span>Left in a 3-paycheque month</span><span class="r"><strong>${fmt.format(three - bills)}</strong></span></li>
   </ul><p class="small muted" style="margin-top:8px">All of this goes to debt. If a surprise expense hits, cover it from chequing first, not a card.</p>`);
-  h += moneyFolds();
   h += syncPanel();
   h += `</div>`;
   el.innerHTML = h;
@@ -1442,7 +1512,7 @@ function openDialog(title, body, submitLabel, handler, extraBtn){
 }
 dlg.addEventListener('close', () => {
   if (dlg.returnValue === 'ok' && onSubmit){ onSubmit(new FormData(form)); save(); render(); toast('Saved'); }
-  if (dlg.returnValue === 'delete' && onDelete){ onDelete(); save(); render(); }
+  if (dlg.returnValue === 'delete' && onDelete){ onDelete(); save(); render(); toast('Deleted'); }
   onSubmit = null; onDelete = null;
 });
 let onDelete = null;
@@ -1605,50 +1675,73 @@ function catRow(label, spent, plan){
     <div class="meter ${cls}" role="progressbar" aria-label="${esc(label)} budget used" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${Math.min(100, Math.max(0, pct))}%"></i></div>
     <p class="small ${cls ? 'msg-' + cls : 'muted'}" style="margin-top:4px">${msg}</p></div>`;
 }
+const catColor = v => { const i = categories().findIndex(c => c.v === v); return 'var(--c' + ((i < 0 ? 7 : i) % 8 + 1) + ')'; };
+function donut(parts, total){
+  const R = 52, C = 2 * Math.PI * R; let off = 0;
+  const segs = parts.map(p => { const len = total ? p.v / total * C : 0; const seg = `<circle r="${R}" cx="70" cy="70" fill="none" stroke="${p.color}" stroke-width="18" stroke-dasharray="${Math.max(0, len - 2).toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}"/>`; off += len; return seg; }).join('');
+  return `<svg class="donut" viewBox="0 0 140 140" role="img" aria-label="Spending by budget"><g transform="rotate(-90 70 70)"><circle r="${R}" cx="70" cy="70" fill="none" stroke="var(--line)" stroke-width="18"/>${segs}</g></svg>`;
+}
 function renderSpend(){
   const el = $('#tab-spend');
   const months = [...new Set([ym(new Date()), ...state.tx.map(t => t.date.slice(0,7))])].sort().reverse();
   if (!spendMonth || !months.includes(spendMonth)) spendMonth = months[0];
   const list = state.tx.filter(t => t.date.slice(0,7) === spendMonth).sort((a,b) => b.date.localeCompare(a.date) || (b.ts || 0) - (a.ts || 0));
-  const spending = list.filter(t => t.amount > 0);
-  const total = spending.reduce((s,t) => s + t.amount, 0);
-  const byMethod = {}; list.forEach(t => byMethod[t.method] = (byMethod[t.method] || 0) + t.amount);
+  const total = list.filter(t => t.amount > 0).reduce((s,t) => s + t.amount, 0);
   const byCat = {}; list.forEach(t => byCat[t.cat] = (byCat[t.cat] || 0) + t.amount);
   const shown = categories().filter(c => byCat[c.v] || state.bills.some(b => b.id === c.v && b.source === 'card'));
   const debtSpend = list.filter(t => { const d = debtOf(t); return d && !d.payInFull && !d.inBudget; });
+  const isNow = spendMonth === ym(new Date());
+  const mi = months.indexOf(spendMonth);
   const monthName = ymToDate(spendMonth).toLocaleDateString('en-CA', {month:'long', year:'numeric'});
 
-  let h = (spendMonth === ym(new Date()) ? leftToSpendPanel().replace('<div class="panel">', '<div class="panel" style="margin-top:0">') : '') + `<div class="btns"><button class="btn primary" data-act="add-tx">Log spending</button><button class="btn" data-act="sync">Sync phone purchases</button><button class="btn" data-act="import">Import from bank</button></div>
-  <p class="hint">${esc(syncNote)} <button class="edit" data-act="sync-help" style="border:0;background:none;color:var(--pine);text-decoration:underline;padding:0;font-size:inherit">Set up phone sync</button></p>
-  ${pending.length ? `<div class="panel move"><h3>${pending.length} new purchase${pending.length === 1 ? '' : 's'} from your phone</h3><div class="btns"><button class="btn primary" data-act="review">Review and add</button></div></div>` : ''}
-  ${months.length > 1 ? `<label for="spm">Month</label><select id="spm">${months.map(m => `<option value="${m}" ${m === spendMonth ? 'selected' : ''}>${ymToDate(m).toLocaleDateString('en-CA',{month:'long',year:'numeric'})}</option>`).join('')}</select>` : ''}
-  <div class="panel"><p class="muted small">Spent in ${monthName}</p><div class="spent num">${fmt.format(total)}</div>
-    <div class="meta" style="display:flex;flex-wrap:wrap;gap:6px">${Object.entries(byMethod).filter(([,v]) => Math.abs(v) > 0.005).map(([k,v]) => `<span class="tag">${esc(methodLabel(k))} ${fmt0.format(v)}</span>`).join('')}</div></div>`;
+  // month switcher
+  let h = `<div class="mswitch"><button class="icon" data-spm="${months[mi + 1] || ''}" ${months[mi + 1] ? '' : 'disabled'} aria-label="Previous month">‹</button><span>${monthName}</span><button class="icon" data-spm="${months[mi - 1] || ''}" ${mi > 0 ? '' : 'disabled'} aria-label="Next month">›</button></div>`;
 
+  // summary: total, donut by budget, left to spend
+  const parts = Object.entries(byCat).filter(([,v]) => v > 0.005).sort((a,b) => b[1] - a[1]);
+  const cmap = {}; parts.forEach(([k], i) => cmap[k] = i < 5 ? 'var(--c' + (i + 1) + ')' : 'var(--muted)');
+  const colorOf = k => cmap[k] || 'var(--muted)';
+  const top = parts.slice(0, 5).map(([k,v]) => ({k, v, l: catLabel(k), color: colorOf(k)}));
+  const rest = parts.slice(5).reduce((s,[,v]) => s + v, 0);
+  if (rest > 0.005) top.push({k:'rest', v:rest, l:'Everything else', color:'var(--muted)'});
+  const st = spendStatus();
+  h += `<div class="panel" style="margin-top:0"><div class="sumrow">
+      <div class="donutwrap">${donut(top, sum(top, x => x.v))}<div class="mid"><span class="small muted">Spent</span><strong class="num" data-count="${total.toFixed(2)}">${fmt0.format(total)}</strong></div></div>
+      <ul class="legend">${top.length ? top.map(x => `<li><span class="sw" style="background:${x.color}"></span><span class="ln">${esc(x.l)}</span><span class="amt">${fmt0.format(x.v)}</span></li>`).join('') : '<li class="muted">Nothing spent yet</li>'}</ul>
+    </div>
+    ${isNow && st.plan ? `<div class="leftline"><div class="row"><span><strong class="num ${st.plan - st.spent < 0 ? 'bad' : ''}">${fmtSigned(st.plan - st.spent)}</strong> <span class="muted small">left to spend</span></span>${st.plan - st.spent > 0 ? `<span class="small muted">${fmt0.format((st.plan - st.spent) / (new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate() - new Date().getDate() + 1))} a day</span>` : ''}</div>
+      <div class="meter ${st.pct >= 100 ? 'over' : st.pct >= 80 ? 'warn' : ''}"><i style="width:${Math.min(100, st.pct)}%"></i><b class="today" style="left:${st.dayPct}%" title="Today"></b></div>
+      <p class="small muted">${fmt.format(st.spent)} of ${fmt.format(st.plan)}. The line marks today: stay left of it to be on pace.</p></div>` : ''}
+    <div class="btns three"><button class="btn primary" data-act="add-tx">+ Log</button><button class="btn" data-act="sync">Sync phone</button><button class="btn" data-act="import">Import</button></div>
+    ${syncNote ? `<p class="hint">${esc(syncNote)}</p>` : ''}</div>`;
+
+  if (pending.length) h += `<div class="panel move"><h3>${pending.length} new purchase${pending.length === 1 ? '' : 's'} from your phone</h3><div class="btns"><button class="btn primary" data-act="review">Review and add</button></div></div>`;
   if (debtSpend.length){
     const amt = debtSpend.reduce((s,t) => s + t.amount, 0);
-    h += `<div class="panel alert"><h3>${fmt.format(amt)} of new debt</h3><p class="small">${[...new Set(debtSpend.map(t => debtOf(t).name))].map(esc).join(', ')} got new charges this month. Switch these to debit or your pay-in-full card.</p></div>`;
+    h += `<div class="panel alert"><h3>${fmt.format(amt)} of new debt</h3><p class="small">${[...new Set(debtSpend.map(t => debtOf(t).name))].map(esc).join(', ')} got new charges. Use debit or your pay-in-full card instead.</p></div>`;
   }
 
-  {
-    const row = c => { const spent = byCat[c.v] || 0; const b = state.bills.find(x => x.id === c.v); return catRow(c.l, spent, b ? n(b.amount) : 0); };
-    const used = shown.filter(c => Math.abs(byCat[c.v] || 0) > 0.005).sort((a,b) => (byCat[b.v] || 0) - (byCat[a.v] || 0)), idle = shown.filter(c => !used.includes(c));
-    h += `<h2>By category</h2><div class="panel">${used.length ? used.map(row).join('') : '<p class="muted">Nothing logged yet.</p>'}
-      ${idle.length ? fold('spend-idle', 'No spending yet', `${idle.length} budget${idle.length === 1 ? '' : 's'}`, idle.map(row).join(''), 'inline') : ''}</div>`;
-  }
-
-  h += `<h2>Transactions</h2><div class="panel">${list.length ? `<div class="txlist">${list.map((t, i) => (i === 0 || list[i-1].date !== t.date ? `<div class="dayhead">${new Date(t.date + 'T12:00:00').toLocaleDateString('en-CA',{weekday:'long', month:'long', day:'numeric'})}</div>` : '') + `<div class="txrow"><button class="tx" data-tx="${t.id}">
-      <span class="d"><span>${esc(t.desc)}</span><span class="small">${t.ts ? `<strong class="txtime">${new Date(t.ts).toLocaleTimeString('en-CA',{hour:'numeric',minute:'2-digit'})}</strong> ` : ''}<span class="muted">${esc(methodLabel(t.method))}</span></span></span>
-      <span class="r">${t.amount < 0 ? '−' + fmt.format(-t.amount) : fmt.format(t.amount)}</span></button>
-      <select class="txcat" data-txcat="${t.id}" aria-label="Budget for ${esc(t.desc)}">${categories().map(c => `<option value="${c.v}" ${c.v === t.cat ? 'selected' : ''}>${esc(c.l)}</option>`).join('')}</select></div>`).join('')}</div>`
+  // transactions, Mint style: tap a row to edit or delete
+  h += `<h2>Transactions</h2><div class="panel">${list.length ? `<div class="txlist">${list.map((t, i) => (i === 0 || list[i-1].date !== t.date ? `<div class="dayhead">${new Date(t.date + 'T12:00:00').toLocaleDateString('en-CA',{weekday:'long', month:'short', day:'numeric'})}</div>` : '') +
+      `<button class="tx" data-tx="${t.id}"><span class="av" style="background:${colorOf(t.cat)}">${esc((t.desc || '?').trim().charAt(0).toUpperCase())}</span>
+        <span class="d"><span class="nm">${esc(t.desc)}</span><span class="small muted">${esc(catLabel(t.cat))} · ${esc(methodLabel(t.method))}${t.ts ? ' · ' + new Date(t.ts).toLocaleTimeString('en-CA',{hour:'numeric',minute:'2-digit'}) : ''}</span></span>
+        <span class="r ${t.amount < 0 ? 'good' : ''}">${t.amount < 0 ? '+' + fmt.format(-t.amount) : fmt.format(t.amount)}</span></button>`).join('')}</div>
+      <p class="small muted" style="margin-top:8px">Tap a transaction to change it or delete it.</p>`
     : `<p class="muted">Log a tap, a cash purchase or a debit payment, or import a file from your bank’s website.</p>`}</div>`;
+
+  // budgets
+  const row = c => { const b = state.bills.find(x => x.id === c.v); return catRow(c.l, byCat[c.v] || 0, b ? n(b.amount) : 0); };
+  const used = shown.filter(c => Math.abs(byCat[c.v] || 0) > 0.005).sort((a,b) => (byCat[b.v] || 0) - (byCat[a.v] || 0)), idle = shown.filter(c => !used.includes(c));
+  h += `<h2>Budgets</h2><div class="panel">${used.length ? used.map(row).join('') : '<p class="muted">Nothing logged yet.</p>'}
+    ${idle.length ? fold('spend-idle', 'No spending yet', `${idle.length} budget${idle.length === 1 ? '' : 's'}`, idle.map(row).join(''), 'inline') : ''}</div>`;
   el.innerHTML = h;
-  const sel = $('#spm'); if (sel) sel.addEventListener('change', e => { spendMonth = e.target.value; render(); });
+  el.querySelectorAll('[data-spm]').forEach(b => b.addEventListener('click', () => { if (b.dataset.spm){ spendMonth = b.dataset.spm; animateNext = true; render(); } }));
 }
 
 function txForm(t){
   return `<div class="grid2"><div><label for="x-amt">Amount</label><input id="x-amt" name="amount" type="number" inputmode="decimal" step="0.01" required value="${t.amount ?? ''}"></div>
   <div><label for="x-date">Date</label><input id="x-date" name="date" type="date" required value="${esc(t.date)}"></div></div>
+  <label for="x-time">Time <span class="muted small">(optional)</span></label><input id="x-time" name="time" type="time" value="${t.ts ? (d => String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'))(new Date(t.ts)) : ''}">
   <label for="x-desc">Where or what</label><input id="x-desc" name="desc" value="${esc(t.desc)}" placeholder="No Frills">
   <label for="x-cat">Category</label><select id="x-cat" name="cat">${categories().map(c => `<option value="${c.v}" ${c.v === t.cat ? 'selected' : ''}>${esc(c.l)}</option>`).join('')}</select>
   <label for="x-m">Paid with</label><select id="x-m" name="method">${methods().map(m => `<option value="${m.v}" ${m.v === t.method ? 'selected' : ''}>${esc(m.l)}</option>`).join('')}</select>
@@ -1663,6 +1756,10 @@ function wireTxForm(isNew){
 }
 function readTx(fd, t){
   Object.assign(t, {amount: Math.round(n(fd.get('amount'))*100)/100, date: fd.get('date') || isoDay(today()), desc: fd.get('desc').trim() || 'Spending', cat: fd.get('cat'), method: fd.get('method')});
+  const tm = fd.get('time');
+  if (tm){ const [hh, mm] = tm.split(':').map(Number); const d = new Date(t.date + 'T00:00:00'); d.setHours(hh, mm, 0, 0); t.ts = d.getTime(); }
+  else if (t.ts && new Date(t.ts).toDateString() !== new Date(t.date + 'T12:00:00').toDateString()) delete t.ts;
+  delete t.guessed;
   t.key = txKey(t.date, t.amount, t.desc);
   return t;
 }
@@ -1678,7 +1775,7 @@ function addTx(){
 function editTx(tid){
   const t = state.tx.find(x => x.id === tid); if (!t) return;
   onDelete = () => { applyTx(t, -1); state.tx = state.tx.filter(x => x.id !== tid); };
-  openDialog('Edit spending', txForm(t), 'Save changes', fd => { applyTx(t, -1); readTx(fd, t); applyTx(t, 1); learn(t); }, '<button class="btn danger" value="delete" formnovalidate style="margin-right:auto">Delete</button>');
+  openDialog('Edit transaction', txForm(t), 'Save changes', fd => { applyTx(t, -1); readTx(fd, t); applyTx(t, 1); learn(t); }, '<button class="btn danger" value="delete" formnovalidate style="margin-right:auto">Delete transaction</button>');
   wireTxForm(false);
 }
 
