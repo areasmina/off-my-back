@@ -19,7 +19,7 @@
   --bg:#eef1f5; --surface:#ffffff; --ink:#1c2230; --muted:#5d6678; --line:#d5dae3;
   --pine:#2f5bd3; --plum:#5b4a6e; --mustard:#9a7a10; --slate:#2f6fd0;
   --pine-soft:#e3eafb; --plum-soft:#ece8f1; --mustard-soft:#f6efd6; --slate-soft:#e2ecfa;
-  --on-pine:#FFFFFF; --red:#c8452f;
+  --on-pine:#FFFFFF; --red:#c8452f; --good:#23915a;
   --w:#c9a227; --u:#2f6fd0; --b:#5b4a6e; --r:#c8452f; --g:#2e8a52;
   --c1:#2f6fd0; --c2:#c8452f; --c3:#c9a227; --c4:#2e8a52; --c5:#5b4a6e; --c6:#d07a2a; --c7:#2f95ab; --c8:#8a93a3;
   color-scheme: light;
@@ -32,7 +32,7 @@
     --bg:#141922; --surface:#1d2430; --ink:#e7ebf2; --muted:#98a2b4; --line:#2e3746;
     --pine:#7aa0ff; --plum:#a993c6; --mustard:#e0bd4a; --slate:#6fa3ff;
     --pine-soft:#222d45; --plum-soft:#2a2535; --mustard-soft:#332d18; --slate-soft:#1f2c42;
-    --on-pine:#0f1522; --red:#f07a63;
+    --on-pine:#0f1522; --red:#f07a63; --good:#5ccf8f;
     --w:#e0bd4a; --u:#6fa3ff; --b:#a993c6; --r:#f07a63; --g:#5cc488;
     --c1:#6fa3ff; --c2:#f07a63; --c3:#e0bd4a; --c4:#5cc488; --c5:#a993c6; --c6:#f0a060; --c7:#6ccfe0; --c8:#a8b0bc;
     color-scheme: dark;
@@ -42,7 +42,7 @@
   --bg:#141922; --surface:#1d2430; --ink:#e7ebf2; --muted:#98a2b4; --line:#2e3746;
   --pine:#7aa0ff; --plum:#a993c6; --mustard:#e0bd4a; --slate:#6fa3ff;
   --pine-soft:#222d45; --plum-soft:#2a2535; --mustard-soft:#332d18; --slate-soft:#1f2c42;
-  --on-pine:#0f1522; --red:#f07a63;
+  --on-pine:#0f1522; --red:#f07a63; --good:#5ccf8f;
   --w:#e0bd4a; --u:#6fa3ff; --b:#a993c6; --r:#f07a63; --g:#5cc488;
   --c1:#6fa3ff; --c2:#f07a63; --c3:#e0bd4a; --c4:#5cc488; --c5:#a993c6; --c6:#f0a060; --c7:#6ccfe0; --c8:#a8b0bc;
   color-scheme: dark;
@@ -238,6 +238,29 @@ details.fold.inline .fb{padding:6px 0 0}
 .facts{list-style:none;padding:0;margin:4px 0 0;display:grid;gap:4px}
 .facts li{font-size:1rem;color:var(--muted)}
 .facts strong{color:var(--ink)}
+.status{display:flex;gap:12px;align-items:flex-start}
+.status .dot{width:12px;height:12px;border-radius:50%;flex:none;margin-top:7px;background:var(--good)}
+.status.warn{background:var(--mustard-soft);border-color:transparent}.status.warn .dot{background:var(--mustard)}
+.status.bad{background:color-mix(in srgb,var(--red) 14%,var(--surface));border-color:transparent}.status.bad .dot{background:var(--red)}
+.status h3{margin:0 0 2px}.status p{margin:0}
+.accts{padding-top:6px;padding-bottom:6px}
+.acct{display:flex;align-items:center;gap:12px;width:100%;background:none;border:0;border-bottom:1px solid var(--line);padding:12px 0;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.acct:last-child{border-bottom:0}
+.acct .ic{width:10px;height:36px;border-radius:99px;flex:none}
+.acct .ic.good{background:var(--good)}.acct .ic.bad{background:var(--red)}
+.acct .nm{flex:1;min-width:0;font-weight:600}
+.acct .nm .sub{display:block;font-weight:400;font-size:.82rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.acct .amt{font-weight:700;font-size:1.08rem;white-space:nowrap}
+.acct.net{cursor:default}.acct.net .nm{padding-left:22px;color:var(--muted)}
+.good{color:var(--good)}.bad{color:var(--red)}.warnc{color:var(--mustard)}
+.rows .r.good{color:var(--good)}
+.chart .zero{stroke:var(--red);stroke-width:1;stroke-dasharray:4 4;opacity:.7}
+.chart .dot.bad{fill:var(--red)}
+.chart .dot.pd{fill:var(--surface);stroke:var(--pine);stroke-width:2}
+.chart .base{fill:none;stroke:var(--muted);stroke-width:1.5;stroke-dasharray:5 5;opacity:.7}
+.legend.two{grid-template-columns:1fr 1fr;column-gap:16px}
+.legend.two li{font-size:.86rem;min-width:0}
+.legend.two .ln{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dlist{list-style:none;padding:0;margin:4px 0 0}
 .dlist li{padding:11px 0;border-bottom:1px solid var(--line)}
 .dlist li:last-child{border-bottom:0}
@@ -620,7 +643,7 @@ function segHtml(t){
   return `<div class="seg">${g.map(([k,l]) => `<button data-tab="${k}" aria-pressed="${k === t}">${l}</button>`).join('')}</div>`;
 }
 const TIPS = {
-  overview: 'This screen shows what you owe and the one thing to do this month. Pay what the blue card says and the plan does the rest.',
+  overview: 'A quick look at your money: how you’re doing, your balances (green is money you have, red is what you owe), and what’s coming in the next 30 days.',
   spend: 'Log what you spend here. Each budget bar turns yellow when it’s nearly used up and red when you go over.',
   debts: 'Everything you owe, biggest first. Tap a debt to log a payment or edit it. Payoff plan shows when each one is gone.',
   budget: 'Your paycheques, bills and savings. Tick bills off as they’re paid. Whatever is left goes to your debts.'
@@ -637,20 +660,73 @@ document.addEventListener('click', e => {
 });
 
 /* Debt balance over time, drawn from the payoff simulation. */
-function payoffChart(sim, startTotal, ht){
+function payoffChart(sim, startTotal, ht, base){
   const pts = [{date: new Date(new Date().getFullYear(), new Date().getMonth(), 1), left: startTotal}, ...sim.months.map(m => ({date:m.date, left:m.left}))];
   const end = pts.findIndex(p => p.left <= 0.5);
   const use = pts.slice(0, end > 0 ? end + 1 : Math.min(pts.length, 121));
   if (use.length < 2) return '';
+  const bpts = base ? [{left:startTotal}, ...base.months.map(m => ({left:m.left}))] : null;
+  const bend = bpts ? bpts.findIndex(p => p.left <= 0.5) : -1;
+  const buse = bpts ? bpts.slice(0, bend > 0 ? bend + 1 : Math.min(bpts.length, 121)) : null;
+  const len = Math.max(use.length, buse ? buse.length : 0);
   const W = 320, H = ht, pad = 16, max = Math.max(1, ...use.map(p => p.left));
-  const x = i => (i / (use.length - 1)) * W, y = v => pad + (1 - v / max) * (H - pad * 2);
+  const x = i => (i / (len - 1)) * W, y = v => pad + (1 - v / max) * (H - pad * 2);
+  const bline = buse && buse.length > use.length ? buse.map((p,i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p.left).toFixed(1)).join(' ') : '';
+  const paid = sim.months.slice(0, use.length - 1).map((m,i) => ({i: i + 1, m})).filter(o => o.m.events.some(e => e.type === 'paid'));
   const line = use.map((p,i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p.left).toFixed(1)).join(' ');
-  const area = line + ` L${W} ${H - pad} L0 ${H - pad} Z`;
-  const last = use[use.length - 1];
+    const last = use[use.length - 1];
   return `<svg class="chart" viewBox="0 -4 ${W} ${H + 14}" role="img" aria-label="Debt going down from ${fmt0.format(startTotal)} now to ${fmt0.format(last.left)} by ${mLabel(last.date)}">
-    <path class="ar" d="${area}"/><path class="ln" d="${line}" pathLength="1"/>
-    <circle class="dot" cx="0" cy="${y(use[0].left)}" r="4"/><circle class="dot" cx="${W}" cy="${y(last.left)}" r="4"/>
-    <text x="0" y="${H + 8}">Now</text><text x="${W}" y="${H + 8}" text-anchor="end">${last.left <= 0.5 ? 'Debt-free ' : ''}${mLabel(last.date)}</text></svg>`;
+    ${bline ? `<path class="base" d="${bline}"/>` : ''}
+    <path class="ar" d="${line} L${x(use.length - 1)} ${H - pad} L0 ${H - pad} Z"/><path class="ln" d="${line}" pathLength="1"/>
+    ${paid.map(o => `<circle class="dot pd" cx="${x(o.i)}" cy="${y(o.m.left)}" r="3.5"><title>${o.m.events.filter(e => e.type === 'paid').map(e => esc(e.name)).join(', ')} paid off ${mLabel(o.m.date)}</title></circle>`).join('')}
+    <circle class="dot" cx="0" cy="${y(use[0].left)}" r="4"/><circle class="dot" cx="${x(use.length - 1)}" cy="${y(last.left)}" r="4"/>
+    <text x="0" y="${H + 8}">Now</text><text x="${x(use.length - 1)}" y="${H + 8}" text-anchor="end">${last.left <= 0.5 ? 'Debt-free ' : ''}${mLabel(last.date)}</text></svg>
+    <p class="small muted" style="margin-top:4px">Each small dot is a debt paid off.${bline ? ' The dashed line is with no extra money.' : ' Move the slider to see how much sooner you could finish.'}</p>`;
+}
+
+const dayLabel = iso => iso ? new Date(iso + 'T12:00:00').toLocaleDateString('en-CA', {month:'short', day:'numeric'}) : '';
+const fmtSigned = v => (v < 0 ? '−' : '') + fmt.format(Math.abs(v));
+function cheqNow(){
+  const c = state.chequing; if (!c) return null;
+  const since = sum(state.tx.filter(t => t.method === 'debit' && (!c.updated || t.date >= c.updated)), t => t.amount);
+  return {bal: n(c.balance) - since};
+}
+/* Day-by-day chequing balance for the next N days, from paydays, bills and automatic payments. */
+function forecast(days){
+  const cq = cheqNow(); const start = cq ? cq.bal : 0;
+  const events = upcomingEvents(days);
+  let bal = start, low = start, lowDate = isoDay(today());
+  const pts = [{d:0, bal:start}], t0 = today();
+  events.forEach(e => { if (!e.cheq) return; const d = Math.round((new Date(e.date + 'T12:00:00') - t0) / 864e5); pts.push({d, bal}); bal += e.amt; pts.push({d, bal}); if (bal < low){ low = bal; lowDate = e.date; } });
+  pts.push({d:days, bal});
+  return {start, end: bal, low, lowDate, pts, days, events: events.filter(e => e.cheq || e.amt > 0)};
+}
+function forecastChart(fc){
+  const W = 320, H = 110, pad = 10;
+  const vals = fc.pts.map(p => p.bal), max = Math.max(...vals, 0), min = Math.min(...vals, 0), span = (max - min) || 1;
+  const x = d => d / fc.days * W, y = v => pad + (max - v) / span * (H - pad * 2);
+  const line = fc.pts.map((p,i) => (i ? 'L' : 'M') + x(p.d).toFixed(1) + ' ' + y(p.bal).toFixed(1)).join(' ');
+  const lowPt = fc.pts.reduce((a,b) => b.bal < a.bal ? b : a, fc.pts[0]);
+  return `<svg class="chart" viewBox="0 -4 ${W} ${H + 14}" role="img" aria-label="Chequing over the next 30 days, lowest ${fmt0.format(fc.low)}">
+    <path class="ar" d="${line} L${W} ${y(min)} L0 ${y(min)} Z"/>
+    ${min < 0 ? `<line x1="0" x2="${W}" y1="${y(0)}" y2="${y(0)}" class="zero"/>` : ''}
+    <path class="ln" d="${line}" pathLength="1"/>
+    <circle class="dot ${fc.low < 0 ? 'bad' : ''}" cx="${x(lowPt.d)}" cy="${y(lowPt.bal)}" r="4"/>
+    <text x="0" y="${H + 8}">Today</text><text x="${W}" y="${H + 8}" text-anchor="end">${dayLabel(isoDay(new Date(today().getTime() + fc.days * 864e5)))}</text></svg>`;
+}
+function spendStatus(){
+  const key = ym(new Date()), mt = state.tx.filter(t => t.date.slice(0,7) === key);
+  const vb = state.bills.filter(b => b.source === 'card');
+  const spent = mt.filter(t => vb.some(b => b.id === t.cat)).reduce((s,t) => s + t.amount, 0), plan = vb.reduce((s,b) => s + n(b.amount), 0);
+  const now = new Date(), dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const newDebt = mt.filter(t => { const d = debtOf(t); return d && !d.payInFull && !d.inBudget; }).reduce((s,t) => s + t.amount, 0);
+  return {spent, plan, pct: plan ? spent / plan * 100 : 0, dayPct: now.getDate() / dim * 100, newDebt};
+}
+/* The pill: every debt as one labelled bar. */
+function debtPill(shown, owe){
+  return `<div class="panel" style="margin-top:0"><p class="muted small">You owe</p><div class="big-result num" data-count="${owe.toFixed(2)}">${fmt.format(owe)}</div>
+    <div class="bar" role="img" aria-label="Your debts by size">${shown.map(d => `<span style="flex-grow:${n(d.balance)};background:${debtColor(d)}" title="${esc(d.name)}"></span>`).join('')}</div>
+    <ul class="legend two">${shown.map(d => `<li><span class="sw" style="background:${debtColor(d)}"></span><span class="ln">${esc(d.name)}</span><span class="amt">${fmt0.format(n(d.balance))}</span></li>`).join('')}</ul></div>`;
 }
 
 function homeData(){
@@ -681,48 +757,60 @@ function renderOverview(){
   const first = sim.months[0];
   const target = order.find(d => !d.inBudget) || order[0];
 
-  /* 1. What you owe, in plain words */
-  let h = `<div class="hero">
-    <p class="owe">You owe</p>
-    <div class="total num" data-count="${(total + everyday).toFixed(2)}">${fmt.format(total + everyday)}</div>
-    <ul class="facts">
-      <li>${sim.allFree ? `Debt-free by <strong>${mLabel(sim.allFree)}</strong> at this pace` : 'At this pace the debt doesn’t clear yet'}</li>
-      ${totalInt > 0.5 ? `<li>Interest costs you <strong style="color:var(--red)">${fmt0.format(totalInt)} a month</strong></li>` : ''}
-    </ul>
-    ${state.startTotal ? `<div class="pbar" role="progressbar" aria-label="Debt paid off" aria-valuenow="${paidPct.toFixed(0)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${Math.max(paidPct, 1)}%"></i>${[25,50,75].map(p => `<b style="left:${p}%"></b>`).join('')}</div>
-    <div class="pkeys"><span><strong>${paidPct.toFixed(0)}%</strong> paid off</span><span>since ${mLabel(ymToDate(state.startMonth))}</span></div>` : ''}
-  </div>`;
-  h += `<div class="panel"><p class="muted small">Your debt going down</p>${payoffChart(sim, total, 110)}</div>`;
+  const cq = cheqNow();
+  const fc = forecast(30);
+  const sv = state.savings || {goal:1000, balance:0};
+  const saved = n(sv.balance) + sum(state.goals || [], g => n(g.balance));
+  const owe = total + everyday;
+  const sp = spendStatus();
+
+  /* 1. How you're doing, in one line */
+  let mood = 'good', verdict = 'You’re on track this month', why = 'Bills are covered and spending is on pace.';
+  if (sp.pct > sp.dayPct + 10 && sp.plan) { mood = 'warn'; verdict = 'Spending is running ahead'; why = `You’ve used ${Math.round(sp.pct)}% of your budget and ${Math.round(sp.dayPct)}% of the month is gone.`; }
+  if (sp.newDebt > 0.005) { mood = 'warn'; verdict = 'New charges on cards you’re paying off'; why = `${fmt.format(sp.newDebt)} this month. Use debit or your pay-in-full card instead.`; }
+  if (cq && fc.low < 100) { mood = fc.low < 0 ? 'bad' : 'warn'; verdict = fc.low < 0 ? 'Chequing may go negative' : 'Chequing gets low'; why = `It could drop to ${fmt.format(fc.low)} around ${dayLabel(fc.lowDate)}. Keep debit spending light until payday.`; }
+  if (sp.pct > 100.05) { mood = 'bad'; verdict = 'You’re over budget this month'; why = `${fmt.format(sp.spent - sp.plan)} over. That comes out of your debt money.`; }
+  let h = `<div class="panel status ${mood}" style="margin-top:0"><span class="dot"></span><div><h3>${verdict}</h3><p class="small muted">${why}</p></div></div>`;
 
   /* 2. Anything that needs you now */
   if (/^Added/.test(syncNote)) h += `<div class="panel move"><p>${esc(syncNote)}</p><div class="btns"><button class="btn" data-tab="spend">See purchases</button></div></div>`;
   if (pending.length) h += `<div class="panel move"><h3>${pending.length} new purchase${pending.length === 1 ? '' : 's'} from your phone</h3><div class="btns"><button class="btn primary" data-act="review">Review and add</button></div></div>`;
   if (sim.shortfall) h += `<div class="panel alert"><h3>Your bills are more than your income</h3><p class="small">Some months don’t cover the minimums. Check your bills and income in Budget.</p></div>`;
 
-  /* 3. The one thing to do this month */
+  /* 3. Balances, Mint style: money you have in green, money you owe in red */
+  h += `<h2>Balances</h2><div class="panel accts">
+    <button class="acct" data-tab="budget"><span class="ic good"></span><span class="nm">Chequing<span class="sub">${cq ? esc(state.chequing.name) : 'Add your balance'}</span></span><span class="amt num good" ${cq ? `data-count="${cq.bal.toFixed(2)}"` : ''}>${cq ? fmt.format(cq.bal) : '—'}</span></button>
+    <button class="acct" data-tab="budget"><span class="ic good"></span><span class="nm">Savings<span class="sub">Emergency fund${(state.goals || []).length ? ' and goals' : ''}</span></span><span class="amt num good" data-count="${saved.toFixed(2)}">${fmt.format(saved)}</span></button>
+    <button class="acct" data-tab="debts"><span class="ic bad"></span><span class="nm">Debt<span class="sub">${shown.length} account${shown.length === 1 ? '' : 's'}${totalInt > 0.5 ? `, ${fmt0.format(totalInt)}/mo interest` : ''}</span></span><span class="amt num bad" data-count="${owe.toFixed(2)}">−${fmt.format(owe)}</span></button>
+    <div class="acct net"><span class="nm">Net worth<span class="sub">${sim.allFree ? `Debt-free by ${mLabel(sim.allFree)}` : 'What you have minus what you owe'}</span></span><span class="amt num ${(cq ? cq.bal : 0) + saved - owe >= 0 ? 'good' : 'bad'}">${fmtSigned((cq ? cq.bal : 0) + saved - owe)}</span></div>
+  </div>`;
+
+  /* 4. The next 30 days */
+  if (cq){
+    const next = fc.events.slice(0, 4), rest = fc.events.slice(4);
+    const row = e => `<li><span><span class="small muted">${dayLabel(e.date)}</span> ${esc(e.label)}</span><span class="r ${e.amt > 0 ? 'good' : ''}">${e.amt > 0 ? '+' : '−'}${fmt.format(Math.abs(e.amt))}</span></li>`;
+    h += `<h2>Next 30 days</h2><div class="panel"><div class="row"><div><p class="muted small">Chequing in 30 days</p><div class="big-result num ${fc.end >= 0 ? '' : 'bad'}" style="font-size:1.7rem">${fmt.format(fc.end)}</div></div>
+        <div class="perday"><span class="num ${fc.low < 0 ? 'bad' : fc.low < 100 ? 'warnc' : ''}">${fmt0.format(fc.low)}</span><span class="small muted">lowest, ${dayLabel(fc.lowDate)}</span></div></div>
+      ${forecastChart(fc)}
+      ${next.length ? `<ul class="rows" style="margin-top:8px">${next.map(row).join('')}</ul>` : '<p class="small muted">Nothing scheduled.</p>'}
+      ${rest.length ? fold('home-30', 'Everything coming up', `${rest.length} more`, `<ul class="rows">${rest.map(row).join('')}</ul>`, 'inline') : ''}
+    </div>`;
+  } else {
+    h += `<h2>Next 30 days</h2><div class="panel"><p class="small">Add your chequing balance to see where your money is headed, payday by payday.</p><div class="btns"><button class="btn primary small" data-act="cheq-update">Add chequing balance</button></div></div>`;
+  }
+
+  /* 5. This month's spending */
+  h += `<h2>This month</h2>` + leftToSpendPanel().replace('<div class="panel">', '<div class="panel" style="margin-top:0">');
+
+  /* 6. What's next for your debt */
   if (first){
     const lines = Object.entries(first.pays).filter(([,v]) => v > 0.5).map(([k,v]) => [state.debts.find(d => d.id === k), v]).filter(x => x[0]).sort((a,b) => b[1] - a[1]);
     const tv = target && first.pays[target.id] ? first.pays[target.id] : 0;
-    const monthName = first.date.toLocaleDateString('en-CA', {month:'long'});
-    h += `<div class="panel move"><p class="muted small">What to pay in ${monthName}</p>
+    h += `<h2>What’s next</h2><div class="panel move" style="margin-top:0"><p class="muted small">Debt payments for ${first.date.toLocaleDateString('en-CA', {month:'long'})}</p>
       <h3 class="lead">Pay ${tv ? fmt0.format(tv) : 'every spare dollar'} to ${esc(target ? target.name : '')}</h3>
-      <p class="small muted">It’s first in line. Pay just the minimum on everything else${first.cheques === 3 ? '. It’s a 3-paycheque month, so the extra cheque goes here too' : ''}.</p>
-      ${fold('move-lines', 'Every payment this month', fmt.format(sum(lines, x => x[1])), `<ul class="rows">${lines.map(([d,v]) => `<li><span>${esc(d.name)}${d.inBudget ? ' <span class="muted small">(in your bills)</span>' : ''}</span><span class="r">${fmt.format(v)}</span></li>`).join('')}</ul>${cardBills() > 0 ? `<p class="small muted" style="margin-top:8px">Plus pay your everyday card in full: about ${fmt.format(cardBills())} of your bills go on it.</p>` : ''}`, 'inline')}
+      <p class="small muted">It’s first in line. Minimums on everything else${first.cheques === 3 ? '. It’s a 3-paycheque month, so the extra cheque goes here too' : ''}.</p>
+      ${fold('move-lines', 'Every payment that month', fmt.format(sum(lines, x => x[1])), `<ul class="rows">${lines.map(([d,v]) => `<li><span>${esc(d.name)}${d.inBudget ? ' <span class="muted small">(in your bills)</span>' : ''}</span><span class="r">${fmt.format(v)}</span></li>`).join('')}</ul>`, 'inline')}
       <div class="btns"><button class="btn primary" data-act="pay-pick">Log a payment</button><button class="btn" data-act="extra">Got extra money?</button></div></div>`;
-  }
-
-  /* 4. Your debts, labelled */
-  {
-    const all = total + everyday || 1;
-    const top = shown.slice(0, 4);
-    if (target && !top.some(d => d.id === target.id)) top.splice(3, 1, shown.find(d => d.id === target.id));
-    const more = shown.length - top.length;
-    h += `<h2>Your debts</h2><div class="panel"><ul class="dlist">${top.map(d => `<li><div class="top"><span class="sw-inline" style="background:${debtColor(d)}"></span>
-        <span class="nm">${esc(d.name)}${target && d.id === target.id ? ' <span class="tag pine">Pay first</span>' : ''}<span class="sub">${d.payInFull ? 'You pay this off every month' : moInt(d) > 0.005 ? fmt.format(moInt(d)) + ' a month in interest' : 'No interest right now'}</span></span>
-        <span class="amt">${fmt.format(n(d.balance))}</span></div>
-        <div class="meter" aria-hidden="true"><i style="width:${Math.max(1.5, n(d.balance) / all * 100)}%;background:${debtColor(d)}"></i></div></li>`).join('')}</ul>
-      <p class="small muted" style="margin-top:6px">Each bar shows that debt’s share of the total.</p>
-      <div class="btns"><button class="btn small" data-tab="debts">${more > 0 ? `See all ${shown.length} debts` : 'Manage debts'}</button></div></div>`;
   }
   el.innerHTML = h;
 }
@@ -847,7 +935,7 @@ function renderPlan(){
     <div class="big-result">${sim.cardsFree ? mLabel(sim.cardsFree) : 'Not on this budget'}</div>
     <p class="muted small" style="margin-top:12px">Everything, including the loan</p>
     <div class="big-result">${sim.allFree ? mLabel(sim.allFree) : 'Not on this budget'}</div>
-    ${payoffChart(sim, currentTotal(), 140)}
+    ${payoffChart(sim, currentTotal(), 140, n(state.extra) > 0 ? base : null)}
     <p style="margin-top:12px">Interest you’ll pay along the way: <strong>${fmt.format(sim.totalInterest)}</strong></p>
     ${n(state.extra) > 0 && base.cardsFree ? `<p class="small" style="margin-top:4px"><span class="tag pine">${sooner} month${sooner===1?'':'s'} sooner</span> and ${fmt0.format(Math.max(0,saved))} less interest than with no extra.</p>` : ''}
   </div>`;
@@ -936,11 +1024,13 @@ function renderBudget(){
 
 function renderDebts(){
   const el = $('#tab-debts');
+  const hd = activeDebts().length ? homeData() : null;
   const debts = state.debts.slice().sort((a,b) => (a.payInFull - b.payInFull) || (n(b.balance) - n(a.balance)));
   const maxBal = Math.max(1, ...debts.map(d => n(d.balance)));
   let h = (state.debts.length && state.lastCheck !== ym(new Date())) ? `<div class="panel warn row" style="margin-top:0"><div><h3>Time for your monthly check</h3><p class="small muted">Type in each balance from your bank app. Takes 2 minutes and keeps the plan accurate.</p></div><button class="btn primary small" data-act="balance-check">Start</button></div>` : '';
   const due = state.debts.length && state.lastCheck !== ym(new Date());
-  h += `<div class="btns" style="margin-top:0">${due ? '' : '<button class="btn primary" data-act="balance-check">Update all balances</button>'}<button class="btn" data-act="add-debt">Add a debt</button></div>
+  if (hd) h = debtPill(hd.shown, hd.total + hd.everyday) + h;
+  h += `<div class="btns">${due ? '' : '<button class="btn primary" data-act="balance-check">Update all balances</button>'}<button class="btn" data-act="add-debt">Add a debt</button></div>
   ${state.lastCheck ? `<p class="hint">Last balance check: ${ymToDate(state.lastCheck).toLocaleDateString('en-CA',{month:'long',year:'numeric'})}</p>` : ''}<div class="folds" style="margin-top:14px">`;
   h += debts.map(d => {
     const t = d.payInFull ? null : typeOf(d);
