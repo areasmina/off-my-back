@@ -230,6 +230,34 @@ details.fold.inline{background:none;border:0;border-radius:0;border-top:1px soli
 details.fold.inline > summary{padding:10px 0 2px}
 details.fold.inline .fb{padding:6px 0 0}
 .meter.thin{height:6px;margin:0 0 10px}
+.seg{display:flex;background:var(--line);border-radius:12px;padding:3px;gap:3px;margin:0 0 14px}
+.seg button{flex:1;border:0;background:none;padding:9px 6px;border-radius:9px;font:inherit;font-weight:600;font-size:.92rem;color:var(--muted);cursor:pointer;transition:background .2s,color .2s}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.panel.tip{background:var(--pine-soft);border-color:transparent;display:flex;gap:12px;align-items:center;margin-top:0}
+.panel.tip p{margin:0;flex:1}
+.facts{list-style:none;padding:0;margin:4px 0 0;display:grid;gap:4px}
+.facts li{font-size:1rem;color:var(--muted)}
+.facts strong{color:var(--ink)}
+.dlist{list-style:none;padding:0;margin:4px 0 0}
+.dlist li{padding:11px 0;border-bottom:1px solid var(--line)}
+.dlist li:last-child{border-bottom:0}
+.dlist .top{display:flex;gap:10px;align-items:center}
+.dlist .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.dlist .nm .sub{display:block;white-space:normal;font-weight:400;font-size:.82rem;color:var(--muted)}
+.dlist .amt{font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}
+.dlist .meter{height:6px;margin-top:7px}
+.chart{display:block;width:100%;height:auto;margin-top:10px;overflow:visible}
+.chart .ar{fill:var(--pine-soft)}
+.chart .ln{fill:none;stroke:var(--pine);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.chart .dot{fill:var(--pine)}
+.chart text{font-size:11px;fill:var(--muted);font-family:inherit}
+.hero .pbar{margin-top:14px}
+@media (prefers-reduced-motion: no-preference){
+  .enter .chart .ln{stroke-dasharray:1;animation:draw 1.3s cubic-bezier(.4,0,.2,1) both}
+  .enter .chart .ar,.enter .chart .dot{animation:fadein .9s .5s ease both}
+  @keyframes draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+  @keyframes fadein{from{opacity:0}}
+}
 .split{display:flex;height:12px;border-radius:99px;overflow:hidden;background:var(--line);margin:10px 0 4px;gap:2px}
 .split span{display:block;height:100%}
 .bill .name{line-height:1.3}
@@ -282,11 +310,9 @@ nav.tabs button{transition:color .2s,border-color .2s}
 <nav class="tabs" aria-label="Sections">
   <div class="inner">
     <button data-tab="overview">Home</button>
-    <button data-tab="spend">Spend</button>
-    <button data-tab="months">Months</button>
-    <button data-tab="plan">Plan</button>
-    <button data-tab="budget">Budget</button>
+    <button data-tab="spend">Spending</button>
     <button data-tab="debts">Debts</button>
+    <button data-tab="budget">Budget</button>
   </div>
 </nav>
 
@@ -570,7 +596,8 @@ function toast(msg){
 }
 
 function render(){
-  document.querySelectorAll('nav.tabs button[data-tab]').forEach(b => b.setAttribute('aria-current', b.dataset.tab === tab ? 'page' : 'false'));
+  const grp = GROUP[tab] || tab;
+  document.querySelectorAll('nav.tabs button[data-tab]').forEach(b => b.setAttribute('aria-current', b.dataset.tab === grp ? 'page' : 'false'));
   TABS.forEach(t => $('#tab-'+t).hidden = t !== tab);
   if (tab === 'overview') renderOverview();
   if (tab === 'spend') renderSpend();
@@ -578,20 +605,57 @@ function render(){
   if (tab === 'plan') renderPlan();
   if (tab === 'budget') renderBudget();
   if (tab === 'debts') renderDebts();
-  afterRender($('#tab-' + tab));
+  const sec = $('#tab-' + tab);
+  if (state.debts.length || state.bills.length) sec.insertAdjacentHTML('afterbegin', tipHtml(grp) + segHtml(tab));
+  afterRender(sec);
 }
 
-function renderOverview(){
-  const el = $('#tab-overview');
+/* Months lives inside Spending, Plan inside Debts. */
+const GROUP = {months:'spend', plan:'debts'};
+const SEGS = {spend:[['spend','This month'],['months','Monthly reports']], debts:[['debts','My debts'],['plan','Payoff plan']]};
+function segHtml(t){
+  const g = SEGS[GROUP[t] || t]; if (!g) return '';
+  return `<div class="seg">${g.map(([k,l]) => `<button data-tab="${k}" aria-pressed="${k === t}">${l}</button>`).join('')}</div>`;
+}
+const TIPS = {
+  overview: 'This screen shows what you owe and the one thing to do this month. Pay what the blue card says and the plan does the rest.',
+  spend: 'Log what you spend here. Each budget bar turns yellow when it’s nearly used up and red when you go over.',
+  debts: 'Everything you owe, biggest first. Tap a debt to log a payment or edit it. Payoff plan shows when each one is gone.',
+  budget: 'Your paycheques, bills and savings. Tick bills off as they’re paid. Whatever is left goes to your debts.'
+};
+let seenTips = LSX.get('omb-tips', {});
+function tipHtml(g){
+  if (!TIPS[g] || seenTips[g]) return '';
+  return `<div class="panel tip"><p class="small">${TIPS[g]}</p><button class="btn small" data-act="tip-ok" data-tip="${g}">Got it</button></div>`;
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-act="tip-ok"]'); if (!b) return;
+  seenTips[b.dataset.tip] = 1; LSX.set('omb-tips', seenTips);
+  const p = b.closest('.tip'); if (p) p.remove();
+});
+
+/* Debt balance over time, drawn from the payoff simulation. */
+function payoffChart(sim, startTotal, ht){
+  const pts = [{date: new Date(new Date().getFullYear(), new Date().getMonth(), 1), left: startTotal}, ...sim.months.map(m => ({date:m.date, left:m.left}))];
+  const end = pts.findIndex(p => p.left <= 0.5);
+  const use = pts.slice(0, end > 0 ? end + 1 : Math.min(pts.length, 121));
+  if (use.length < 2) return '';
+  const W = 320, H = ht, pad = 16, max = Math.max(1, ...use.map(p => p.left));
+  const x = i => (i / (use.length - 1)) * W, y = v => pad + (1 - v / max) * (H - pad * 2);
+  const line = use.map((p,i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p.left).toFixed(1)).join(' ');
+  const area = line + ` L${W} ${H - pad} L0 ${H - pad} Z`;
+  const last = use[use.length - 1];
+  return `<svg class="chart" viewBox="0 -4 ${W} ${H + 14}" role="img" aria-label="Debt going down from ${fmt0.format(startTotal)} now to ${fmt0.format(last.left)} by ${mLabel(last.date)}">
+    <path class="ar" d="${area}"/><path class="ln" d="${line}" pathLength="1"/>
+    <circle class="dot" cx="0" cy="${y(use[0].left)}" r="4"/><circle class="dot" cx="${W}" cy="${y(last.left)}" r="4"/>
+    <text x="0" y="${H + 8}">Now</text><text x="${W}" y="${H + 8}" text-anchor="end">${last.left <= 0.5 ? 'Debt-free ' : ''}${mLabel(last.date)}</text></svg>`;
+}
+
+function homeData(){
   const debts = activeDebts().filter(d => n(d.balance) > 0);
-  if (!state.debts.length && !state.bills.length){
-    el.innerHTML = `<div class="panel empty"><h3>Start with what you owe</h3><p class="muted">Add each card, loan and line of credit, then your monthly bills. The plan builds itself from there.</p><div class="btns" style="justify-content:center"><button class="btn primary" data-act="add-debt">Add a debt</button><button class="btn" data-act="go-budget">Add bills</button></div></div>${IN_CLAUDE ? '' : `<div class="folds">${syncPanel()}</div>`}`;
-    return;
-  }
   const total = currentTotal();
   const sim = simulate(state.extra);
   const order = sortTargets(debts.map(d => ({...d, bal:n(d.balance)})), simStart());
-  const first = sim.months[0];
   const down = state.startTotal != null ? state.startTotal - total : 0;
   const paidPct = state.startTotal ? Math.min(100, Math.max(0, down / state.startTotal * 100)) : 0;
   const everydayCards = state.debts.filter(d => d.payInFull && n(d.balance) > 0);
@@ -601,39 +665,68 @@ function renderOverview(){
   const totalInt = sum(shown, moInt);
   const nowM = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   const dur = m => { const y = Math.floor(m/12), r = m % 12; return [y ? y + (y === 1 ? ' year' : ' years') : '', r ? r + (r === 1 ? ' month' : ' months') : ''].filter(Boolean).join(' ') || 'This month'; };
+  return {debts, total, sim, order, down, paidPct, everydayCards, everyday, shown, moInt, totalInt, nowM, dur};
+}
 
-  /* 1. The answer: how much, how fast */
+function renderOverview(){
+  const el = $('#tab-overview');
+  const debts = activeDebts().filter(d => n(d.balance) > 0);
+  if (!state.debts.length && !state.bills.length){
+    el.innerHTML = `<div class="panel empty"><h3>Start with what you owe</h3><p class="muted">Add each card, loan and line of credit, then your monthly bills. The plan builds itself from there.</p><div class="btns" style="justify-content:center"><button class="btn primary" data-act="add-debt">Add a debt</button><button class="btn" data-act="go-budget">Add bills</button></div><p class="small muted" style="margin-top:14px">Already have a backup file? <button class="edit" data-act="restore" style="border:0;background:none;color:var(--pine);text-decoration:underline;padding:0;font-size:inherit">Restore a backup</button></p></div>${IN_CLAUDE ? '' : `<div class="folds">${syncPanel()}</div>`}`;
+    return;
+  }
+  const {total, sim, order, paidPct, everyday, shown, moInt, totalInt} = homeData();
+  const first = sim.months[0];
+  const target = order.find(d => !d.inBudget) || order[0];
+
+  /* 1. What you owe, in plain words */
   let h = `<div class="hero">
     <p class="owe">You owe</p>
     <div class="total num" data-count="${(total + everyday).toFixed(2)}">${fmt.format(total + everyday)}</div>
-    <div class="bar" role="img" aria-label="Debt split by account">${shown.map(d => `<span style="flex-grow:${n(d.balance)};background:${debtColor(d)}"></span>`).join('')}</div>
-    <div class="stats">
-      <div><span class="k">Paid off</span><span class="v num">${paidPct.toFixed(0)}%</span></div>
-      <div><span class="k">Interest</span><span class="v num" style="color:${totalInt > 0.5 ? 'var(--red)' : 'inherit'}">${fmt0.format(totalInt)}/mo</span></div>
-      <div><span class="k">Debt-free</span><span class="v num">${sim.allFree ? mLabel(sim.allFree) : '—'}</span></div>
-    </div>
+    <ul class="facts">
+      <li>${sim.allFree ? `Debt-free by <strong>${mLabel(sim.allFree)}</strong> at this pace` : 'At this pace the debt doesn’t clear yet'}</li>
+      ${totalInt > 0.5 ? `<li>Interest costs you <strong style="color:var(--red)">${fmt0.format(totalInt)} a month</strong></li>` : ''}
+    </ul>
+    ${state.startTotal ? `<div class="pbar" role="progressbar" aria-label="Debt paid off" aria-valuenow="${paidPct.toFixed(0)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${Math.max(paidPct, 1)}%"></i>${[25,50,75].map(p => `<b style="left:${p}%"></b>`).join('')}</div>
+    <div class="pkeys"><span><strong>${paidPct.toFixed(0)}%</strong> paid off</span><span>since ${mLabel(ymToDate(state.startMonth))}</span></div>` : ''}
   </div>`;
+  h += `<div class="panel"><p class="muted small">Your debt going down</p>${payoffChart(sim, total, 110)}</div>`;
 
   /* 2. Anything that needs you now */
   if (/^Added/.test(syncNote)) h += `<div class="panel move"><p>${esc(syncNote)}</p><div class="btns"><button class="btn" data-tab="spend">See purchases</button></div></div>`;
   if (pending.length) h += `<div class="panel move"><h3>${pending.length} new purchase${pending.length === 1 ? '' : 's'} from your phone</h3><div class="btns"><button class="btn primary" data-act="review">Review and add</button></div></div>`;
   if (sim.shortfall) h += `<div class="panel alert"><h3>Your bills are more than your income</h3><p class="small">Some months don’t cover the minimums. Check your bills and income in Budget.</p></div>`;
-  if (state.debts.length && state.lastCheck !== ym(new Date())) h += `<div class="panel warn row"><div><h3>Monthly balance check</h3><p class="small muted">2 minutes. Keeps the plan honest.</p></div><button class="btn primary small" data-act="balance-check">Check</button></div>`;
 
-  /* 3. What to do next */
+  /* 3. The one thing to do this month */
   if (first){
     const lines = Object.entries(first.pays).filter(([,v]) => v > 0.5).map(([k,v]) => [state.debts.find(d => d.id === k), v]).filter(x => x[0]).sort((a,b) => b[1] - a[1]);
-    const target = order.find(d => !d.inBudget) || order[0];
     const tv = target && first.pays[target.id] ? first.pays[target.id] : 0;
-    h += `<div class="panel move"><p class="muted small">Your move for ${mLabel(first.date)}</p>
-      <h3 class="lead">Put ${tv ? fmt0.format(tv) : 'every spare dollar'} on ${esc(target ? target.name : '')}</h3>
-      <p class="small muted">Minimums on the rest${first.cheques === 3 ? '. This is a 3-paycheque month, so the extra cheque goes to debt' : ''}.</p>
-      ${fold('move-lines', 'All payments this month', fmt.format(sum(lines, x => x[1])), `<ul class="rows">${lines.map(([d,v]) => `<li><span>${esc(d.name)}${d.inBudget ? ' <span class="muted small">(in your bills)</span>' : ''}</span><span class="r">${fmt.format(v)}</span></li>`).join('')}</ul>${cardBills() > 0 ? `<p class="small muted" style="margin-top:8px">Plus pay your everyday card in full: about ${fmt.format(cardBills())} of your bills go on it.</p>` : ''}`, 'inline')}
-      <div class="btns"><button class="btn primary" data-act="pay-pick">Log a payment</button><button class="btn" data-act="extra">Log extra money</button></div></div>`;
+    const monthName = first.date.toLocaleDateString('en-CA', {month:'long'});
+    h += `<div class="panel move"><p class="muted small">What to pay in ${monthName}</p>
+      <h3 class="lead">Pay ${tv ? fmt0.format(tv) : 'every spare dollar'} to ${esc(target ? target.name : '')}</h3>
+      <p class="small muted">It’s first in line. Pay just the minimum on everything else${first.cheques === 3 ? '. It’s a 3-paycheque month, so the extra cheque goes here too' : ''}.</p>
+      ${fold('move-lines', 'Every payment this month', fmt.format(sum(lines, x => x[1])), `<ul class="rows">${lines.map(([d,v]) => `<li><span>${esc(d.name)}${d.inBudget ? ' <span class="muted small">(in your bills)</span>' : ''}</span><span class="r">${fmt.format(v)}</span></li>`).join('')}</ul>${cardBills() > 0 ? `<p class="small muted" style="margin-top:8px">Plus pay your everyday card in full: about ${fmt.format(cardBills())} of your bills go on it.</p>` : ''}`, 'inline')}
+      <div class="btns"><button class="btn primary" data-act="pay-pick">Log a payment</button><button class="btn" data-act="extra">Got extra money?</button></div></div>`;
   }
 
-  /* 4. Spending this month, at a glance */
+  /* 4. Your debts, labelled */
   {
+    const all = total + everyday || 1;
+    const top = shown.slice(0, 4);
+    if (target && !top.some(d => d.id === target.id)) top.splice(3, 1, shown.find(d => d.id === target.id));
+    const more = shown.length - top.length;
+    h += `<h2>Your debts</h2><div class="panel"><ul class="dlist">${top.map(d => `<li><div class="top"><span class="sw-inline" style="background:${debtColor(d)}"></span>
+        <span class="nm">${esc(d.name)}${target && d.id === target.id ? ' <span class="tag pine">Pay first</span>' : ''}<span class="sub">${d.payInFull ? 'You pay this off every month' : moInt(d) > 0.005 ? fmt.format(moInt(d)) + ' a month in interest' : 'No interest right now'}</span></span>
+        <span class="amt">${fmt.format(n(d.balance))}</span></div>
+        <div class="meter" aria-hidden="true"><i style="width:${Math.max(1.5, n(d.balance) / all * 100)}%;background:${debtColor(d)}"></i></div></li>`).join('')}</ul>
+      <p class="small muted" style="margin-top:6px">Each bar shows that debt’s share of the total.</p>
+      <div class="btns"><button class="btn small" data-tab="debts">${more > 0 ? `See all ${shown.length} debts` : 'Manage debts'}</button></div></div>`;
+  }
+  el.innerHTML = h;
+}
+
+function leftToSpendPanel(){
+  let h = '';
     const key = ym(new Date());
     const mt = state.tx.filter(t => t.date.slice(0,7) === key);
     const vb = state.bills.filter(b => b.source === 'card');
@@ -652,15 +745,11 @@ function renderOverview(){
       ${onDebt > 0.005 ? `<p class="small" style="color:var(--red)">${fmt.format(onDebt)} went on cards you’re paying off. That’s new debt.</p>` : ''}
       ${fold('home-cats', 'By budget', vb.filter(b => mt.some(t => t.cat === b.id && n(t.amount))).length + ' with spending', vb.map(b => catRow(b.name, mt.filter(t => t.cat === b.id).reduce((s,t) => s + t.amount, 0), n(b.amount))).join(''), 'inline')}
     </div>`;
-  }
-
-  /* 5. Everything else, folded */
-  h += `<div class="folds">`;
-  h += fold('home-debts', 'Your debts', `${shown.length} account${shown.length === 1 ? '' : 's'}`,
-    `<ul class="legend">${shown.map(d => `<li style="align-items:flex-start"><span class="sw" style="background:${debtColor(d)};margin-top:6px"></span><span>${esc(d.name)}<br><span class="muted small">${rateLabel(d)}</span></span><span class="amt" style="text-align:right">${fmt.format(n(d.balance))}<br><span class="small" style="color:${moInt(d) > 0.005 ? 'var(--red)' : 'var(--muted)'}">${moInt(d) > 0.005 ? fmt.format(moInt(d)) + '/mo interest' : 'no interest'}</span></span></li>`).join('')}</ul>
-     <p class="small" style="margin-top:10px">Interest right now: <strong style="color:var(--red)">${fmt.format(totalInt)} a month</strong>, about ${fmt0.format(totalInt * 12)} a year.</p>
-     <div class="btns"><button class="btn small" data-tab="debts">Manage debts</button></div>`);
-
+    return h;
+}
+function progressFolds(){
+  const {debts, total, sim, paidPct, down, everydayCards, everyday, nowM, dur} = homeData();
+  let h = '';
   if (state.startTotal){
     const elapsed = Math.max(0, monthsBetween(ymToDate(state.startMonth), nowM));
     const remaining = sim.allFree ? Math.max(0, monthsBetween(nowM, sim.allFree)) : null;
@@ -674,10 +763,33 @@ function renderOverview(){
       <ul class="rows miles">${miles.map(m => `<li><span>${m.p === 100 ? 'Debt-free' : m.p + '% paid off'}</span><span class="r">${m.done ? '<span class="tag pine">Done</span>' : m.date ? mLabel(m.date) : 'Over 20 years'}</span></li>`).join('')}</ul>
       ${remaining != null ? `<p class="muted small" style="margin-top:14px">Time through the plan</p>
       <div class="pbar time" role="progressbar" aria-valuenow="${timePct.toFixed(0)}" aria-valuemin="0" aria-valuemax="100" aria-label="Time through the plan"><i style="width:${Math.max(timePct, 1.5)}%"></i></div>
-      <div class="pkeys"><span>${elapsed ? dur(elapsed) + ' in' : 'Just started'}</span><span>${timePct.toFixed(0)}% of the way</span></div>` : '<p class="small">Find more room in Plan or Budget to get a finish date.</p>'}
+      <div class="pkeys"><span>${elapsed ? dur(elapsed) + ' in' : 'Just started'}</span><span>${timePct.toFixed(0)}% of the way</span></div>` : '<p class="small">Find more room with the slider above or in Budget to get a finish date.</p>'}
       ${sim.cardsFree && sim.allFree && +sim.cardsFree !== +sim.allFree ? `<p class="small muted" style="margin-top:10px">Cards and line of credit gone in ${dur(Math.max(0, monthsBetween(nowM, sim.cardsFree)))} (${mLabel(sim.cardsFree)}).</p>` : ''}`);
   }
 
+  const promos = debts.filter(d => d.promoEnd).sort((a,b) => a.promoEnd.localeCompare(b.promoEnd));
+  if (promos.length){
+    const now = today();
+    const nextEnd = promos.map(d => ymToDate(d.promoEnd)).find(e => e > now);
+    h += fold('home-promo', '0% deadlines', nextEnd ? `next in ${Math.round((nextEnd - now)/864e5)} days` : 'ended', promos.map(d => {
+      const end = ymToDate(d.promoEnd);
+      const days = Math.max(0, Math.round((end - now)/864e5));
+      const mo = monthsBetween(simStart(), end);
+      const need = mo > 0 ? n(d.balance)/mo : n(d.balance);
+      const ended = end <= now;
+      return `<div class="deadline"><div><div class="days num">${ended ? 'Ended' : days}</div><div class="mo">${ended ? '' : 'days left'}</div></div>
+        <div><strong>${esc(d.name)}</strong>: ${fmt.format(n(d.balance))} left
+        <div class="small muted">${ended ? `Now charging ${postRate(d)}%. Look for a new 0% transfer.` : `0% ends ${mLabel(end)}. Clearing it in time takes ${fmt0.format(need)}/month.`}${(d.postApr === '' || d.postApr == null) ? ` Rate after 0% not set, so the plan assumes ${state.assumedPostApr}%.` : ''}</div></div></div>`;
+    }).join(''));
+  }
+
+  h += fold('home-finish', 'Finish lines', sim.allFree ? 'all done ' + mLabel(sim.allFree) : 'not on this budget',
+    `<ul class="rows">${sim.debts.map(d => `<li><span>${esc(d.name)}</span><span class="r">${d.paidOff ? mLabel(d.paidOff) : 'Over 20 years'}</span></li>`).join('')}</ul>
+    <p class="small muted" style="margin-top:8px">${sim.allFree ? `Debt-free in ${mLabel(sim.allFree)} at ${fmt.format(n(state.extra))} extra a month. Change that with the slider above.` : 'At this pace the debt doesn’t clear. Find more room with the slider above or in Budget.'}</p>`);
+  return h;
+}
+function moneyFolds(){
+  let h = '';
   if (state.chequing){
     const c = state.chequing;
     const since = sum(state.tx.filter(t => t.method === 'debit' && (!c.updated || t.date >= c.updated)), t => t.amount);
@@ -711,33 +823,11 @@ function renderOverview(){
     h += fold('home-save', 'Savings', `${fmt0.format(n(sv.balance) + sum(goals, g => n(g.balance)))} saved${goals.length ? ` · ${goals.length + 1} goals` : ''}`, body);
   }
 
-  const promos = debts.filter(d => d.promoEnd).sort((a,b) => a.promoEnd.localeCompare(b.promoEnd));
-  if (promos.length){
-    const now = today();
-    const nextEnd = promos.map(d => ymToDate(d.promoEnd)).find(e => e > now);
-    h += fold('home-promo', '0% deadlines', nextEnd ? `next in ${Math.round((nextEnd - now)/864e5)} days` : 'ended', promos.map(d => {
-      const end = ymToDate(d.promoEnd);
-      const days = Math.max(0, Math.round((end - now)/864e5));
-      const mo = monthsBetween(simStart(), end);
-      const need = mo > 0 ? n(d.balance)/mo : n(d.balance);
-      const ended = end <= now;
-      return `<div class="deadline"><div><div class="days num">${ended ? 'Ended' : days}</div><div class="mo">${ended ? '' : 'days left'}</div></div>
-        <div><strong>${esc(d.name)}</strong>: ${fmt.format(n(d.balance))} left
-        <div class="small muted">${ended ? `Now charging ${postRate(d)}%. Look for a new 0% transfer.` : `0% ends ${mLabel(end)}. Clearing it in time takes ${fmt0.format(need)}/month.`}${(d.postApr === '' || d.postApr == null) ? ` Rate after 0% not set, so the plan assumes ${state.assumedPostApr}%.` : ''}</div></div></div>`;
-    }).join(''));
-  }
-
-  h += fold('home-finish', 'Finish lines', sim.allFree ? 'all done ' + mLabel(sim.allFree) : 'not on this budget',
-    `<ul class="rows">${sim.debts.map(d => `<li><span>${esc(d.name)}</span><span class="r">${d.paidOff ? mLabel(d.paidOff) : 'Over 20 years'}</span></li>`).join('')}</ul>
-    <p class="small muted" style="margin-top:8px">${sim.allFree ? `Debt-free in ${mLabel(sim.allFree)} at ${fmt.format(n(state.extra))} extra a month. Change that in Plan.` : 'At this pace the debt doesn’t clear. Find more room in Plan or Budget.'}</p>`);
-  h += syncPanel();
-  h += `</div>`;
-  el.innerHTML = h;
+  return h;
 }
-
 function renderPlan(){
   const el = $('#tab-plan');
-  if (!activeDebts().length){ el.innerHTML = `<div class="panel empty"><h3>No debts yet</h3><p class="muted">Add your debts to see a payoff plan.</p><div class="btns" style="justify-content:center"><button class="btn primary" data-act="add-debt">Add a debt</button></div></div>`; return; }
+  if (!activeDebts().length){ el.innerHTML = `<div class="panel empty"><h3>No debts yet</h3><p class="muted">Add your debts to see when you’ll be debt-free.</p><div class="btns" style="justify-content:center"><button class="btn primary" data-act="add-debt">Add a debt</button></div></div>`; return; }
   const sim = simulate(state.extra);
   const base = simulate(0);
   const sooner = (sim.cardsFree && base.cardsFree) ? monthsBetween(sim.cardsFree, base.cardsFree) : 0;
@@ -755,6 +845,7 @@ function renderPlan(){
     <div class="big-result">${sim.cardsFree ? mLabel(sim.cardsFree) : 'Not on this budget'}</div>
     <p class="muted small" style="margin-top:12px">Everything, including the loan</p>
     <div class="big-result">${sim.allFree ? mLabel(sim.allFree) : 'Not on this budget'}</div>
+    ${payoffChart(sim, currentTotal(), 140)}
     <p style="margin-top:12px">Interest you’ll pay along the way: <strong>${fmt.format(sim.totalInterest)}</strong></p>
     ${n(state.extra) > 0 && base.cardsFree ? `<p class="small" style="margin-top:4px"><span class="tag pine">${sooner} month${sooner===1?'':'s'} sooner</span> and ${fmt0.format(Math.max(0,saved))} less interest than with no extra.</p>` : ''}
   </div>`;
@@ -766,16 +857,16 @@ function renderPlan(){
     }).join('')}</ul><p class="small" style="margin-top:8px">Start looking for a transfer offer about a month before. When you move it, use “Move to 0% offer” in Debts so the plan updates.</p></div>`;
   }
 
-  h += `<h2>How the plan pays</h2><p class="small muted">Highest interest first. Then 0% balances, soonest deadline first. Loans already in your bills last. A 0% balance jumps to the front when its offer ends.</p>
-  <div class="panel">${sim.months.slice(0,60).map(m => {
+  h += `<div class="folds">${progressFolds()}</div>`;
+  h += `<div class="folds">` + fold('plan-months', 'Month by month', `${sim.months.length} months`, `<p class="small muted">Highest interest first. Then 0% balances, soonest deadline first. Loans already in your bills last. A 0% balance jumps to the front when its offer ends.</p><div>${sim.months.slice(0,60).map(m => {
     const lines = Object.entries(m.pays).filter(([,v]) => v > 0.5).map(([k,v]) => { const d = state.debts.find(x => x.id === k); return d ? `<li><span>${esc(d.name)}</span><span class="num">${fmt.format(v)}</span></li>` : ''; }).join('');
     const ev = m.events.map(e => e.type === 'paid' ? `<div class="event paid">${esc(e.name)} paid off</div>` : `<div class="event promo">${esc(e.name)} 0% ends with ${fmt0.format(e.bal)} left</div>`).join('');
     return `<details><summary><span>${mLabel(m.date)}${m.cheques === 3 ? ' <span class="tag pine">3 cheques</span>' : ''}</span><span class="num muted">${fmt0.format(m.left)} left</span></summary>${ev}<ul>${lines}</ul></details>`;
-  }).join('')}${sim.months.length > 60 ? '<p class="small muted">Showing the first 5 years.</p>' : ''}</div>`;
+  }).join('')}${sim.months.length > 60 ? '<p class="small muted">Showing the first 5 years.</p>' : ''}</div>`) + `</div>`;
   el.innerHTML = h;
   const r = $('#extra');
   r.addEventListener('input', () => { $('#extraVal').textContent = fmt0.format(n(r.value)); });
-  r.addEventListener('change', () => { state.extra = n(r.value); save(); renderPlan(); });
+  r.addEventListener('change', () => { state.extra = n(r.value); save(); render(); });
 }
 
 function renderBudget(){
@@ -833,17 +924,21 @@ function renderBudget(){
     <li><span>Left in a 2-paycheque month</span><span class="r"><strong>${fmt.format(two - bills)}</strong></span></li>
     <li><span>Left in a 3-paycheque month</span><span class="r"><strong>${fmt.format(three - bills)}</strong></span></li>
   </ul><p class="small muted" style="margin-top:8px">All of this goes to debt. If a surprise expense hits, cover it from chequing first, not a card.</p>`);
+  h += moneyFolds();
+  h += syncPanel();
   h += `</div>`;
   el.innerHTML = h;
-  $('#perCheque').addEventListener('change', e => { state.income.perCheque = n(e.target.value); save(); renderBudget(); });
-  $('#payday').addEventListener('change', e => { state.income.nextPayday = e.target.value; save(); renderBudget(); });
+  $('#perCheque').addEventListener('change', e => { state.income.perCheque = n(e.target.value); save(); render(); });
+  $('#payday').addEventListener('change', e => { state.income.nextPayday = e.target.value; save(); render(); });
 }
 
 function renderDebts(){
   const el = $('#tab-debts');
   const debts = state.debts.slice().sort((a,b) => (a.payInFull - b.payInFull) || (n(b.balance) - n(a.balance)));
   const maxBal = Math.max(1, ...debts.map(d => n(d.balance)));
-  let h = `<div class="btns" style="margin-top:0"><button class="btn primary" data-act="balance-check">Update all balances</button><button class="btn" data-act="add-debt">Add a debt</button></div>
+  let h = (state.debts.length && state.lastCheck !== ym(new Date())) ? `<div class="panel warn row" style="margin-top:0"><div><h3>Time for your monthly check</h3><p class="small muted">Type in each balance from your bank app. Takes 2 minutes and keeps the plan accurate.</p></div><button class="btn primary small" data-act="balance-check">Start</button></div>` : '';
+  const due = state.debts.length && state.lastCheck !== ym(new Date());
+  h += `<div class="btns" style="margin-top:0">${due ? '' : '<button class="btn primary" data-act="balance-check">Update all balances</button>'}<button class="btn" data-act="add-debt">Add a debt</button></div>
   ${state.lastCheck ? `<p class="hint">Last balance check: ${ymToDate(state.lastCheck).toLocaleDateString('en-CA',{month:'long',year:'numeric'})}</p>` : ''}<div class="folds" style="margin-top:14px">`;
   h += debts.map(d => {
     const t = d.payInFull ? null : typeOf(d);
@@ -1242,7 +1337,7 @@ function renderMonths(){
     <div class="btns"><button class="btn primary" data-act="export-csv">Export spreadsheet</button><button class="btn" data-act="backup">Download backup</button><button class="btn" data-act="restore">Restore backup</button></div>
     ${backupNote ? `<p class="hint">${esc(backupNote)}</p>` : ''}</div>`;
   el.innerHTML = h;
-  $('#rm').addEventListener('change', e => { repMonth = e.target.value; renderMonths(); });
+  $('#rm').addEventListener('change', e => { repMonth = e.target.value; render(); });
 }
 
 /* ---------- dialogs ---------- */
@@ -1431,7 +1526,7 @@ function renderSpend(){
   const debtSpend = list.filter(t => { const d = debtOf(t); return d && !d.payInFull && !d.inBudget; });
   const monthName = ymToDate(spendMonth).toLocaleDateString('en-CA', {month:'long', year:'numeric'});
 
-  let h = `<div class="btns" style="margin-top:0"><button class="btn primary" data-act="add-tx">Log spending</button><button class="btn" data-act="sync">Sync phone purchases</button><button class="btn" data-act="import">Import from bank</button></div>
+  let h = (spendMonth === ym(new Date()) ? leftToSpendPanel().replace('<div class="panel">', '<div class="panel" style="margin-top:0">') : '') + `<div class="btns"><button class="btn primary" data-act="add-tx">Log spending</button><button class="btn" data-act="sync">Sync phone purchases</button><button class="btn" data-act="import">Import from bank</button></div>
   <p class="hint">${esc(syncNote)} <button class="edit" data-act="sync-help" style="border:0;background:none;color:var(--pine);text-decoration:underline;padding:0;font-size:inherit">Set up phone sync</button></p>
   ${pending.length ? `<div class="panel move"><h3>${pending.length} new purchase${pending.length === 1 ? '' : 's'} from your phone</h3><div class="btns"><button class="btn primary" data-act="review">Review and add</button></div></div>` : ''}
   ${months.length > 1 ? `<label for="spm">Month</label><select id="spm">${months.map(m => `<option value="${m}" ${m === spendMonth ? 'selected' : ''}>${ymToDate(m).toLocaleDateString('en-CA',{month:'long',year:'numeric'})}</option>`).join('')}</select>` : ''}
@@ -1443,10 +1538,12 @@ function renderSpend(){
     h += `<div class="panel alert"><h3>${fmt.format(amt)} of new debt</h3><p class="small">${[...new Set(debtSpend.map(t => debtOf(t).name))].map(esc).join(', ')} got new charges this month. Switch these to debit or your pay-in-full card.</p></div>`;
   }
 
-  h += `<h2>By category</h2><div class="panel">${shown.length ? shown.map(c => {
-    const spent = byCat[c.v] || 0; const b = state.bills.find(x => x.id === c.v); const plan = b ? n(b.amount) : 0;
-    return catRow(c.l, spent, plan);
-  }).join('') : '<p class="muted">Nothing logged yet.</p>'}</div>`;
+  {
+    const row = c => { const spent = byCat[c.v] || 0; const b = state.bills.find(x => x.id === c.v); return catRow(c.l, spent, b ? n(b.amount) : 0); };
+    const used = shown.filter(c => Math.abs(byCat[c.v] || 0) > 0.005).sort((a,b) => (byCat[b.v] || 0) - (byCat[a.v] || 0)), idle = shown.filter(c => !used.includes(c));
+    h += `<h2>By category</h2><div class="panel">${used.length ? used.map(row).join('') : '<p class="muted">Nothing logged yet.</p>'}
+      ${idle.length ? fold('spend-idle', 'No spending yet', `${idle.length} budget${idle.length === 1 ? '' : 's'}`, idle.map(row).join(''), 'inline') : ''}</div>`;
+  }
 
   h += `<h2>Transactions</h2><div class="panel">${list.length ? `<div class="txlist">${list.map((t, i) => (i === 0 || list[i-1].date !== t.date ? `<div class="dayhead">${new Date(t.date + 'T12:00:00').toLocaleDateString('en-CA',{weekday:'long', month:'long', day:'numeric'})}</div>` : '') + `<div class="txrow"><button class="tx" data-tx="${t.id}">
       <span class="d"><span>${esc(t.desc)}</span><span class="small">${t.ts ? `<strong class="txtime">${new Date(t.ts).toLocaleTimeString('en-CA',{hour:'numeric',minute:'2-digit'})}</strong> ` : ''}<span class="muted">${esc(methodLabel(t.method))}</span></span></span>
@@ -1454,7 +1551,7 @@ function renderSpend(){
       <select class="txcat" data-txcat="${t.id}" aria-label="Budget for ${esc(t.desc)}">${categories().map(c => `<option value="${c.v}" ${c.v === t.cat ? 'selected' : ''}>${esc(c.l)}</option>`).join('')}</select></div>`).join('')}</div>`
     : `<p class="muted">Log a tap, a cash purchase or a debit payment, or import a file from your bank’s website.</p>`}</div>`;
   el.innerHTML = h;
-  const sel = $('#spm'); if (sel) sel.addEventListener('change', e => { spendMonth = e.target.value; renderSpend(); });
+  const sel = $('#spm'); if (sel) sel.addEventListener('change', e => { spendMonth = e.target.value; render(); });
 }
 
 function txForm(t){
@@ -1832,7 +1929,7 @@ document.addEventListener('change', e => {
   const key = ym(new Date()); state.checks[key] = state.checks[key] || {};
   state.checks[key][c] = e.target.checked;
   const keys = Object.keys(state.checks).sort(); if (keys.length > 6) keys.slice(0, keys.length - 6).forEach(k => delete state.checks[k]);
-  save(); renderBudget();
+  save(); render();
 });
 function setTab(t){ animateNext = true; tab = t; if (location.hash !== '#' + t) history.replaceState(null, '', '#' + t); render(); window.scrollTo(0,0); }
 const fromHash = () => { const h = location.hash.slice(1); return TABS.includes(h) ? h : null; };
