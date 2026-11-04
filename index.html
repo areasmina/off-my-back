@@ -264,10 +264,28 @@ details.fold.inline .fb{padding:6px 0 0}
 .mswitch .icon{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:1.4rem;line-height:1;cursor:pointer}
 .mswitch .icon:disabled{opacity:.3;cursor:default}
 .sumrow{display:flex;gap:16px;align-items:center}
-.donutwrap{position:relative;width:118px;height:118px;flex:none}
+.donutwrap{position:relative;width:180px;height:180px;margin:4px auto 10px}
+.clegend{list-style:none;padding:0;margin:0}
+.clegend li{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:.95rem}
+.clegend li:first-child{border-top:0}
+.clegend .sw{width:12px;height:12px;border-radius:50%;flex:none}
+.clegend .ln{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.clegend .pc{color:var(--muted);font-size:.85rem;width:40px;text-align:right}
+.clegend .amt{width:84px;text-align:right;font-weight:600}
+.todaykey{display:inline-block;width:2px;height:11px;background:var(--ink);opacity:.55;vertical-align:-1px;margin:0 2px}
+.hist{display:flex;flex-direction:column}
+.hrow{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;background:none;border:0;border-top:1px solid var(--line);padding:11px 0;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.hrow:first-child{border-top:0}
+.hrow > span:first-child{display:flex;flex-direction:column;min-width:0}
+.linkish{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:left}
+.segopt{flex:1;margin:0;cursor:pointer}
+.segopt input{position:absolute;opacity:0;pointer-events:none}
+.segopt span{display:block;text-align:center;padding:9px 6px;border-radius:9px;font-weight:600;color:var(--muted)}
+.segopt input:checked + span{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.goal{padding:14px 0}
 .donut{width:100%;height:100%}
 .donutwrap .mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.donutwrap .mid strong{font-size:1.2rem}
+.donutwrap .mid strong{font-size:1.35rem}
 .sumrow .legend{flex:1;min-width:0;margin:0}
 .sumrow .legend li{font-size:.88rem}
 .sumrow .legend .ln,.flow .ln{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1051,20 +1069,24 @@ function renderBudget(){
     <p class="small muted" style="margin-top:6px">Tap a bill to edit it.</p></div>`;
 
   /* 3. Everyday budgets, filled by this month's spending */
-  h += `<h2>Everyday budgets <span class="h2sub">${fmt0.format(sum(everydayList, b => n(b.amount)))} a month</span></h2><div class="panel">${everydayList.length ? everydayList.map(b => `<button class="catbtn" data-edit-bill="${b.id}">${catRow(b.name, spentBy[b.id] || 0, n(b.amount))}</button>`).join('') : '<p class="muted">No budgets yet.</p>'}
-    <p class="small muted" style="margin-top:6px">Tap a budget to change the amount.</p></div>`;
+  h += `<h2>Everyday budgets <span class="h2sub">${fmt0.format(sum(everydayList, b => n(b.amount)))} a month</span></h2><div class="panel">${everydayList.length ? `<div class="hist">${everydayList.map(b => `<button class="hrow" data-edit-bill="${b.id}"><span><span>${esc(b.name)}</span></span><span class="num">${fmt.format(n(b.amount))}</span></button>`).join('')}</div>` : '<p class="muted">No budgets yet.</p>'}
+    <p class="small muted" style="margin-top:6px">Tap a budget to change it. See how much you’ve used in Spending.</p></div>`;
 
-  /* 4. Savings goals */
+  /* 4. Savings goals, with history you can edit */
   {
     const sv = state.savings || {goal:1000, balance:0};
-    const goals = [{id:null, name:'Emergency fund', balance:n(sv.balance), goal:n(sv.goal)}, ...(state.goals || [])];
-    h += `<h2>Savings <span class="h2sub">${fmt0.format(sum(goals, g => n(g.balance)))} saved</span></h2><div class="panel">${goals.map(g => {
-      const gp = n(g.goal) ? Math.min(100, n(g.balance) / n(g.goal) * 100) : 0;
-      return `<div class="goal"><div class="top"><span><strong>${esc(g.name)}</strong></span><span class="num">${fmt0.format(n(g.balance))} <span class="muted small">of ${fmt0.format(n(g.goal))}</span></span></div>
+    const goals = [{id:null, pot:sv, name:'Emergency fund'}, ...(state.goals || []).map(g => ({id:g.id, pot:g, name:g.name}))];
+    h += `<h2>Savings <span class="h2sub">${fmt0.format(sum(goals, g => n(g.pot.balance)))} saved</span></h2><div class="panel">${goals.map(g => {
+      const pot = g.pot, gp = n(pot.goal) ? Math.min(100, n(pot.balance) / n(pot.goal) * 100) : 0;
+      const log = potLog(pot).slice().sort((a,b) => b.date.localeCompare(a.date)).slice(0, 30);
+      const gd = g.id ? `data-gid="${g.id}"` : '';
+      return `<div class="goal"><div class="top"><button class="linkish" data-act="sv-goal" ${gd}><strong>${esc(g.name)}</strong> <span class="muted small">Edit</span></button><span class="num">${fmt0.format(n(pot.balance))} <span class="muted small">of ${fmt0.format(n(pot.goal))}</span></span></div>
         <div class="meter"><i style="width:${gp}%;background:var(--good)"></i></div>
-        <div class="row"><span class="small muted">${gp >= 100 ? 'Goal reached' : fmt.format(n(g.goal) - n(g.balance)) + ' to go'}</span>
-        <span class="btns" style="margin:0">${g.id ? `<button class="btn small" data-act="goal-add" data-gid="${g.id}">Add</button><button class="btn small" data-act="goal-use" data-gid="${g.id}">Use</button>` : `<button class="btn small" data-act="sv-add">Add</button><button class="btn small" data-act="sv-use">Use</button><button class="btn small" data-act="sv-goal">Goal</button>`}</span></div></div>`;
-    }).join('')}</div>`;
+        <div class="row"><span class="small muted">${gp >= 100 ? 'Goal reached' : fmt.format(Math.max(0, n(pot.goal) - n(pot.balance))) + ' to go'}</span>
+        <span class="btns" style="margin:0"><button class="btn small" data-act="goal-add" ${gd}>+ Add</button><button class="btn small" data-act="goal-use" ${gd}>− Take out</button></span></div>
+        ${log.length ? fold('sv-h-' + (g.id || 'ef'), 'History', `${log.length} entr${log.length === 1 ? 'y' : 'ies'}`, `<div class="hist">${log.map(e => `<button class="hrow" data-act="sv-entry" ${gd} data-eid="${e.id}"><span><span>${esc(e.note || (e.amount > 0 ? 'Added' : 'Taken out'))}</span><span class="small muted">${dayLabel(e.date)}</span></span><span class="num ${e.amount > 0 ? 'good' : 'bad'}">${e.amount > 0 ? '+' : '−'}${fmt.format(Math.abs(e.amount))}</span></button>`).join('')}</div><p class="small muted">Tap an entry to change or remove it.</p>`, 'inline') : ''}</div>`;
+    }).join('')}
+    <div class="btns"><button class="btn small" data-act="goal-new">+ New savings goal</button></div></div>`;
   }
 
   /* 5. Settings and detail, folded */
@@ -1332,31 +1354,57 @@ function balanceCheck(){
     logEntry(changes.length ? 'Balance check: ' + changes.join(', ') : 'Balance check: everything matched');
   });
 }
-function addSavings(amount, note){
-  const sv = state.savings;
-  sv.balance = Math.max(0, Math.round((n(sv.balance) + amount) * 100) / 100);
-  sv.log = (sv.log || []).concat({date: isoDay(today()), amount, note}).slice(-200);
+/* Savings: the emergency fund (gid null) and named goals. Each deposit or withdrawal is kept in a log so it can be edited or removed. */
+const potOf = gid => gid ? (state.goals || []).find(x => x.id === gid) : state.savings;
+const potName = gid => gid ? (potOf(gid) || {}).name : 'Emergency fund';
+function potLog(pot){ pot.log = pot.log || []; pot.log.forEach(e => { if (!e.id) e.id = id(); }); return pot.log; }
+function addSavings(amount, note, gid, date){
+  const pot = potOf(gid || null); if (!pot) return;
+  pot.balance = Math.max(0, Math.round((n(pot.balance) + amount) * 100) / 100);
+  potLog(pot).push({id:id(), date: date || isoDay(today()), amount, note: note || ''});
+  pot.log = pot.log.slice(-300);
 }
-function savingsMove(sign){
-  openDialog(sign > 0 ? 'Add to emergency fund' : 'Use emergency fund', `<label for="sv-a">Amount</label><input id="sv-a" name="amount" type="number" inputmode="decimal" step="0.01" min="0.01" required>
-    <label for="sv-n">Note</label><input id="sv-n" name="note" placeholder="${sign > 0 ? 'From bonus' : 'Car repair'}">
-    ${sign < 0 ? '<p class="hint">Only for real emergencies. Then rebuild it before paying extra on debt.</p>' : ''}`, sign > 0 ? 'Add' : 'Take out', fd => {
-    const a = Math.round(n(fd.get('amount')) * 100) / 100; if (a <= 0) return;
-    const note = fd.get('note').trim();
-    addSavings(sign * a, note);
-    logEntry((sign > 0 ? 'Saved to' : 'Used from') + ' emergency fund' + (note ? ': ' + note : ''), a);
+function saveForm(e, sign){
+  return `<div class="seg" style="margin-top:4px"><label class="segopt"><input type="radio" name="dir" value="1" ${sign > 0 ? 'checked' : ''}><span>Add money</span></label><label class="segopt"><input type="radio" name="dir" value="-1" ${sign < 0 ? 'checked' : ''}><span>Take out</span></label></div>
+    <div class="grid2"><div><label for="sv-a">Amount</label><input id="sv-a" name="amount" type="number" inputmode="decimal" step="0.01" min="0.01" required value="${e ? Math.abs(e.amount) : ''}"></div>
+    <div><label for="sv-d">Date</label><input id="sv-d" name="date" type="date" required value="${esc(e ? e.date : isoDay(today()))}"></div></div>
+    <label for="sv-n">Note</label><input id="sv-n" name="note" value="${esc(e ? e.note : '')}" placeholder="From paycheque">`;
+}
+function readSave(fd){ const a = Math.round(n(fd.get('amount')) * 100) / 100; return {amount: (fd.get('dir') === '-1' ? -1 : 1) * a, date: fd.get('date') || isoDay(today()), note: String(fd.get('note') || '').trim()}; }
+function savingsMove(sign, gid){
+  gid = gid || null; if (!potOf(gid)) return;
+  openDialog(potName(gid), saveForm(null, sign), 'Save', fd => {
+    const r = readSave(fd); if (!r.amount) return;
+    addSavings(r.amount, r.note, gid, r.date);
+    logEntry((r.amount > 0 ? 'Saved to ' : 'Used from ') + potName(gid) + (r.note ? ': ' + r.note : ''), Math.abs(r.amount));
   });
 }
-function goalMove(gid, sign){
-  const g = (state.goals || []).find(x => x.id === gid); if (!g) return;
-  openDialog((sign > 0 ? 'Add to ' : 'Use from ') + esc(g.name), `<label for="gm-a">Amount</label><input id="gm-a" name="amount" type="number" inputmode="decimal" step="0.01" min="0.01" required>`, sign > 0 ? 'Add' : 'Take out', fd => {
-    const a = Math.round(n(fd.get('amount')) * 100) / 100; if (a <= 0) return;
-    g.balance = Math.max(0, Math.round((n(g.balance) + sign * a) * 100) / 100);
-    logEntry((sign > 0 ? 'Saved to ' : 'Used from ') + g.name, a);
-  });
+function goalMove(gid, sign){ savingsMove(sign, gid); }
+function editSaveEntry(gid, eid){
+  gid = gid || null; const pot = potOf(gid); if (!pot) return;
+  const e = potLog(pot).find(x => x.id === eid); if (!e) return;
+  onDelete = () => { pot.balance = Math.max(0, Math.round((n(pot.balance) - e.amount) * 100) / 100); pot.log = pot.log.filter(x => x.id !== eid); };
+  openDialog('Edit ' + esc(potName(gid)) + ' entry', saveForm(e, e.amount < 0 ? -1 : 1), 'Save changes', fd => {
+    const r = readSave(fd); if (!r.amount) return;
+    pot.balance = Math.max(0, Math.round((n(pot.balance) - e.amount + r.amount) * 100) / 100);
+    Object.assign(e, r);
+  }, '<button class="btn danger" value="delete" formnovalidate style="margin-right:auto">Remove</button>');
 }
-function savingsGoal(){
-  openDialog('Emergency fund goal', `<label for="sv-g">Goal</label><input id="sv-g" name="goal" type="number" inputmode="decimal" step="1" value="${n(state.savings.goal)}">`, 'Save', fd => { state.savings.goal = Math.max(0, n(fd.get('goal'))); });
+function savingsGoal(gid){
+  gid = gid || null; const pot = potOf(gid);
+  const isNew = gid === 'new';
+  const g = isNew ? {name:'', goal:''} : pot; if (!g) return;
+  if (!isNew && gid) onDelete = () => { state.goals = state.goals.filter(x => x.id !== gid); logEntry('Removed savings goal ' + g.name); };
+  openDialog(isNew ? 'New savings goal' : 'Edit ' + esc(potName(gid)), `${gid ? `<label for="sg-n">Name</label><input id="sg-n" name="name" required value="${esc(g.name)}" placeholder="Vacation">` : ''}
+    <label for="sg-g">Target</label><input id="sg-g" name="goal" type="number" inputmode="decimal" step="1" min="0" required value="${g.goal === '' ? '' : n(g.goal)}">
+    ${!isNew ? `<label for="sg-b">Saved so far</label><input id="sg-b" name="balance" type="number" inputmode="decimal" step="0.01" min="0" value="${n(g.balance)}"><p class="hint">Change this only to correct the total. A note is added to the history.</p>` : ''}`,
+    isNew ? 'Add goal' : 'Save', fd => {
+      if (isNew){ state.goals = state.goals || []; state.goals.push({id:id(), name: String(fd.get('name')).trim() || 'Goal', goal: Math.max(0, n(fd.get('goal'))), balance:0, log:[]}); return; }
+      if (gid) g.name = String(fd.get('name')).trim() || g.name;
+      g.goal = Math.max(0, n(fd.get('goal')));
+      const nb = Math.max(0, Math.round(n(fd.get('balance')) * 100) / 100), diff = Math.round((nb - n(g.balance)) * 100) / 100;
+      if (Math.abs(diff) >= 0.01){ g.balance = nb; potLog(g).push({id:id(), date:isoDay(today()), amount:diff, note:'Correction'}); }
+    }, (!isNew && gid) ? '<button class="btn danger" value="delete" formnovalidate style="margin-right:auto">Delete goal</button>' : '');
 }
 function extraMoney(){
   const debtOpts = activeDebts().filter(d => n(d.balance) > 0);
@@ -1699,19 +1747,17 @@ function renderSpend(){
 
   // summary: total, donut by budget, left to spend
   const parts = Object.entries(byCat).filter(([,v]) => v > 0.005).sort((a,b) => b[1] - a[1]);
-  const cmap = {}; parts.forEach(([k], i) => cmap[k] = i < 5 ? 'var(--c' + (i + 1) + ')' : 'var(--muted)');
+  const cmap = {}; parts.forEach(([k], i) => cmap[k] = i < 8 ? 'var(--c' + (i + 1) + ')' : `hsl(${(i * 47 + 20) % 360} 55% 60%)`);
   const colorOf = k => cmap[k] || 'var(--muted)';
-  const top = parts.slice(0, 5).map(([k,v]) => ({k, v, l: catLabel(k), color: colorOf(k)}));
-  const rest = parts.slice(5).reduce((s,[,v]) => s + v, 0);
-  if (rest > 0.005) top.push({k:'rest', v:rest, l:'Everything else', color:'var(--muted)'});
+  const top = parts.map(([k,v]) => ({k, v, l: catLabel(k), color: colorOf(k)}));
+  const ptot = sum(top, x => x.v) || 1;
   const st = spendStatus();
-  h += `<div class="panel" style="margin-top:0"><div class="sumrow">
-      <div class="donutwrap">${donut(top, sum(top, x => x.v))}<div class="mid"><span class="small muted">Spent</span><strong class="num" data-count="${total.toFixed(2)}">${fmt0.format(total)}</strong></div></div>
-      <ul class="legend">${top.length ? top.map(x => `<li><span class="sw" style="background:${x.color}"></span><span class="ln">${esc(x.l)}</span><span class="amt">${fmt0.format(x.v)}</span></li>`).join('') : '<li class="muted">Nothing spent yet</li>'}</ul>
-    </div>
+  h += `<div class="panel" style="margin-top:0">
+      <div class="donutwrap">${donut(top, ptot)}<div class="mid"><span class="small muted">Spent</span><strong class="num" data-count="${total.toFixed(2)}">${fmt.format(total)}</strong></div></div>
+      ${top.length ? `<ul class="clegend">${top.map(x => `<li><span class="sw" style="background:${x.color}"></span><span class="ln">${esc(x.l)}</span><span class="pc">${Math.round(x.v / ptot * 100)}%</span><span class="amt num">${fmt.format(x.v)}</span></li>`).join('')}</ul>` : '<p class="muted" style="text-align:center">Nothing spent yet</p>'}
     ${isNow && st.plan ? `<div class="leftline"><div class="row"><span><strong class="num ${st.plan - st.spent < 0 ? 'bad' : ''}">${fmtSigned(st.plan - st.spent)}</strong> <span class="muted small">left to spend</span></span>${st.plan - st.spent > 0 ? `<span class="small muted">${fmt0.format((st.plan - st.spent) / (new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate() - new Date().getDate() + 1))} a day</span>` : ''}</div>
       <div class="meter ${st.pct >= 100 ? 'over' : st.pct >= 80 ? 'warn' : ''}"><i style="width:${Math.min(100, st.pct)}%"></i><b class="today" style="left:${st.dayPct}%" title="Today"></b></div>
-      <p class="small muted">${fmt.format(st.spent)} of ${fmt.format(st.plan)}. The line marks today: stay left of it to be on pace.</p></div>` : ''}
+      <p class="small muted">${fmt.format(st.spent)} of ${fmt.format(st.plan)} budgeted · <span class="todaykey"></span> today</p></div>` : ''}
     <div class="btns three"><button class="btn primary" data-act="add-tx">+ Log</button><button class="btn" data-act="sync">Sync phone</button><button class="btn" data-act="import">Import</button></div>
     ${syncNote ? `<p class="hint">${esc(syncNote)}</p>` : ''}</div>`;
 
@@ -1721,6 +1767,11 @@ function renderSpend(){
     h += `<div class="panel alert"><h3>${fmt.format(amt)} of new debt</h3><p class="small">${[...new Set(debtSpend.map(t => debtOf(t).name))].map(esc).join(', ')} got new charges. Use debit or your pay-in-full card instead.</p></div>`;
   }
 
+  // budgets
+  const row = c => { const b = state.bills.find(x => x.id === c.v); return catRow(c.l, byCat[c.v] || 0, b ? n(b.amount) : 0); };
+  const used = shown.filter(c => Math.abs(byCat[c.v] || 0) > 0.005).sort((a,b) => (byCat[b.v] || 0) - (byCat[a.v] || 0)), idle = shown.filter(c => !used.includes(c));
+  h += `<h2>Budgets</h2><div class="panel">${used.length ? used.map(row).join('') : '<p class="muted">Nothing logged yet.</p>'}
+    ${idle.length ? fold('spend-idle', 'No spending yet', `${idle.length} budget${idle.length === 1 ? '' : 's'}`, idle.map(row).join(''), 'inline') : ''}</div>`;
   // transactions, Mint style: tap a row to edit or delete
   h += `<h2>Transactions</h2><div class="panel">${list.length ? `<div class="txlist">${list.map((t, i) => (i === 0 || list[i-1].date !== t.date ? `<div class="dayhead">${new Date(t.date + 'T12:00:00').toLocaleDateString('en-CA',{weekday:'long', month:'short', day:'numeric'})}</div>` : '') +
       `<button class="tx" data-tx="${t.id}"><span class="av" style="background:${colorOf(t.cat)}">${esc((t.desc || '?').trim().charAt(0).toUpperCase())}</span>
@@ -1729,11 +1780,6 @@ function renderSpend(){
       <p class="small muted" style="margin-top:8px">Tap a transaction to change it or delete it.</p>`
     : `<p class="muted">Log a tap, a cash purchase or a debit payment, or import a file from your bank’s website.</p>`}</div>`;
 
-  // budgets
-  const row = c => { const b = state.bills.find(x => x.id === c.v); return catRow(c.l, byCat[c.v] || 0, b ? n(b.amount) : 0); };
-  const used = shown.filter(c => Math.abs(byCat[c.v] || 0) > 0.005).sort((a,b) => (byCat[b.v] || 0) - (byCat[a.v] || 0)), idle = shown.filter(c => !used.includes(c));
-  h += `<h2>Budgets</h2><div class="panel">${used.length ? used.map(row).join('') : '<p class="muted">Nothing logged yet.</p>'}
-    ${idle.length ? fold('spend-idle', 'No spending yet', `${idle.length} budget${idle.length === 1 ? '' : 's'}`, idle.map(row).join(''), 'inline') : ''}</div>`;
   el.innerHTML = h;
   el.querySelectorAll('[data-spm]').forEach(b => b.addEventListener('click', () => { if (b.dataset.spm){ spendMonth = b.dataset.spm; animateNext = true; render(); } }));
 }
@@ -2169,9 +2215,11 @@ document.addEventListener('click', e => {
   if (a === 'balance-check') balanceCheck();
   if (a === 'sv-add') savingsMove(1);
   if (a === 'sv-use') savingsMove(-1);
-  if (a === 'sv-goal') savingsGoal();
+  if (a === 'sv-goal') savingsGoal(t.dataset.gid || null);
+  if (a === 'goal-new') savingsGoal('new');
   if (a === 'goal-add') goalMove(t.dataset.gid, 1);
   if (a === 'goal-use') goalMove(t.dataset.gid, -1);
+  if (a === 'sv-entry') editSaveEntry(t.dataset.gid || null, t.dataset.eid);
   if (a === 'extra') extraMoney();
   if (a === 'cheq-update') cheqUpdate();
   if (a === 'bill-sync') syncBills(true);
