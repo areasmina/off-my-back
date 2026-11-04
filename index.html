@@ -286,7 +286,6 @@ nav.tabs button{transition:color .2s,border-color .2s}
 }
 
 .hdr{display:flex;align-items:center;gap:10px}
-.web [data-act="sync"],.web [data-act="sync-help"],.web [data-act="bill-sync"],.web [data-act="review"]{display:none!important}
 .fold .code{font:700 18px/1.3 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.04em;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center;margin:10px 0 2px;word-break:break-all;user-select:all}
 .fold .row input{flex:1}
 </style>
@@ -392,7 +391,10 @@ async function init(){
   setSaveState(store ? 'Saved' : 'Not saved on this device');
   animateNext = true;
   render();
-  if (SY && SY.dirty) syncNow();
+  if (!IN_CLAUDE){
+    (SY ? syncNow() : Promise.resolve()).then(() => { if (gScript()){ syncAlerts(false); syncBills(false); } });
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && gScript()) setTimeout(() => syncAlerts(false), 1500); });
+  }
   try {
     const perms = (window.claude && claude.use) ? await claude.use('permissions') : null;
     const st = perms ? await perms.state('mcp:Gmail').catch(() => 'unavailable') : 'unavailable';
@@ -1595,6 +1597,84 @@ let mcpNs = null, pending = [], syncNote = '';
 const ALERT_Q = 'subject:(OMB OR OBM) newer_than:45d';
 async function getMcp(){ if (mcpNs) return mcpNs; try { mcpNs = (window.claude && claude.use) ? await claude.use('mcp') : null; } catch(e){ mcpNs = null; } return mcpNs; }
 function syncMsg(t){ syncNote = t; if (tab === 'spend' || tab === 'overview') render(); }
+/* Inside Claude, Gmail is read through Claude's Gmail connection. On the website it is read through a small
+   Google Apps Script that you deploy in your own Google account; it only answers the searches this app uses. */
+const gScript = () => (state.gmailScript && state.gmailScript.url && state.gmailScript.key) ? state.gmailScript : null;
+async function gmailApi(){
+  const mcp = await getMcp();
+  if (mcp) return {
+    search: async (q, n) => { const res = await mcp.callTool('Gmail', 'search_threads', {query: q, pageSize: n}); const p = (res && res.payload) || {}; return (Array.isArray(p.threads) ? p.threads : []).flatMap(th => Array.isArray(th.messages) ? th.messages : []); },
+    body: async (id, q) => { const full = await mcp.callTool('Gmail', 'get_message', {messageId: id, messageFormat: 'PLAIN_TEXT'}); const p = (full && full.payload) || {}; return (p.plaintextBody || '') + ' ' + (p.snippet || ''); }
+  };
+  const g = gScript(); if (!g) return null;
+  const call = async params => {
+    const u = new URL(g.url); u.searchParams.set('key', g.key); Object.entries(params).forEach(([k,v]) => u.searchParams.set(k, v));
+    let r; try { r = await fetch(u.toString(), {cache:'no-store', redirect:'follow'}); } catch(e){ throw Object.assign(new Error('net'), {code:'script_net'}); }
+    if (!r.ok) throw Object.assign(new Error('http'), {code:'script_http'});
+    let j; try { j = await r.json(); } catch(e){ throw Object.assign(new Error('json'), {code:'script_access'}); }
+    if (j.error) throw Object.assign(new Error(j.error), {code: j.error === 'key' ? 'script_key' : 'script_err'});
+    return j;
+  };
+  return { search: async (q, n) => (await call({q, n})).messages || [], body: async (id, q) => (await call({q, id})).text || '' };
+}
+function gmailScriptCode(key){
+  const qs = [ALERT_Q, ...BILL_EMAILS.map(b => b.query)];
+  return `// Off My Back: lets your Off My Back website read your purchase and bill emails.
+// It only runs the searches listed below and only answers requests that carry your secret key.
+const KEY = '${key}';
+const SEARCHES = ${JSON.stringify(qs)};
+function doGet(e) {
+  const p = (e && e.parameter) || {};
+  if (p.key !== KEY) return out({error: 'key'});
+  if (SEARCHES.indexOf(p.q) < 0) return out({error: 'search'});
+  const threads = GmailApp.search(p.q, 0, Math.min(100, Number(p.n) || 50));
+  const msgs = [];
+  threads.forEach(t => t.getMessages().forEach(m => msgs.push({id: m.getId(), subject: m.getSubject(), date: m.getDate().toISOString(), msg: m})));
+  if (p.id) {
+    const m = msgs.filter(x => x.id === p.id)[0];
+    return m ? out({text: m.msg.getPlainBody().slice(0, 20000)}) : out({error: 'id'});
+  }
+  return out({messages: msgs.map(x => ({id: x.id, subject: x.subject, date: x.date}))});
+}
+function out(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
+`;
+}
+let gsDraftKey = LSX.get('omb-gskey', null);
+function gmailSetup(){
+  const g = gScript();
+  const key = g ? g.key : (gsDraftKey = gsDraftKey || (k => (LSX.set('omb-gskey', k), k))(newCode()));
+  openDialog('Connect your Gmail', `<p class="small">The website can’t use Claude’s Gmail connection, so it reads your purchase emails through a small script in your own Google account. Setup takes about 3 minutes, once.</p>
+    <ol class="small steps" style="padding-left:20px;margin:10px 0">
+      <li>On a computer, open <a href="https://script.google.com/home/projects/create" target="_blank" rel="noopener">script.google.com</a> and sign in with the Gmail that gets your OMB emails. A new project opens.</li>
+      <li>Delete what’s in the editor, then tap <strong>Copy script</strong> below and paste it in. Press <strong>Save</strong>.</li>
+      <li>Tap <strong>Deploy → New deployment</strong>. Click the gear, pick <strong>Web app</strong>. Set <strong>Execute as: Me</strong> and <strong>Who has access: Anyone</strong>. Tap <strong>Deploy</strong>.</li>
+      <li>Google asks you to allow access. Choose your account, then <strong>Advanced → Go to project (unsafe)</strong> → <strong>Allow</strong>. It says “unsafe” only because you wrote the script yourself.</li>
+      <li>Copy the <strong>Web app URL</strong> it shows and paste it here.</li>
+    </ol>
+    <div class="btns"><button type="button" class="btn small" data-act="gs-copy">Copy script</button></div>
+    <label for="gs-url">Web app URL</label><input id="gs-url" name="url" placeholder="https://script.google.com/macros/s/…/exec" value="${g ? esc(g.url) : ''}" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <p class="hint">The script only runs the Off My Back searches and needs a secret key only your app has. Once sync across devices is on, your phone gets this link too.</p>`, 'Connect', fd => {
+    const url = String(fd.get('url') || '').trim();
+    if (!/^https:\/\/script\.google(usercontent)?\.com\/.+/.test(url)){ toast('That doesn’t look like a Web app URL'); return; }
+    state.gmailScript = {url, key}; gsDraftKey = null;
+    setTimeout(() => { syncAlerts(true); syncBills(false); }, 300);
+  }, g ? '<button type="button" class="btn" data-act="gs-off">Disconnect</button>' : '');
+}
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-act="gs-copy"],[data-act="gs-off"]'); if (!b) return;
+  if (b.dataset.act === 'gs-off'){ e.preventDefault(); delete state.gmailScript; save(); dlg.close(); syncMsg('Gmail disconnected.'); return; }
+  e.preventDefault();
+  const key = gScript() ? gScript().key : (gsDraftKey = gsDraftKey || (k => (LSX.set('omb-gskey', k), k))(newCode()));
+  const code = gmailScriptCode(key);
+  try { await navigator.clipboard.writeText(code); toast('Script copied'); } catch(err){ prompt('Copy this script', code); }
+});
+function gmailError(c){
+  return c === 'script_key' ? 'The Google script has a different key. Open Connect Gmail and copy the script again.'
+    : c === 'script_access' ? 'Google blocked the request. In the script, check Who has access is set to Anyone, then deploy again.'
+    : (c === 'script_net' || c === 'script_http') ? 'Couldn’t reach your Google script. Try again in a minute.'
+    : c === 'script_err' ? 'Your Google script needs updating. Open Connect Gmail and copy the script again.'
+    : null;
+}
 function guessMethod(text){
   const t = String(text || '').toLowerCase();
   if (/\b(debit|interac|chequing|checking)\b/.test(t)) return 'debit';
@@ -1633,14 +1713,14 @@ function defaultMethod(){
   const ev = state.debts.find(d => d.payInFull);
   return ev ? 'debt:' + ev.id : 'debit';
 }
+let alertsBusy = false;
 async function syncAlerts(fromClick){
-  const mcp = await getMcp();
-  if (!mcp){ if (fromClick) syncMsg('Phone sync only works with this page open in Claude.'); return; }
+  const gm = await gmailApi();
+  if (!gm){ if (fromClick){ if (IN_CLAUDE) syncMsg('Phone sync needs Gmail connected in Claude.'); else gmailSetup(); } return; }
+  if (alertsBusy) return; alertsBusy = true;
   if (fromClick) syncMsg('Checking Gmail…');
   try {
-    const res = await mcp.callTool('Gmail', 'search_threads', {query: ALERT_Q, pageSize: 50});
-    const p = (res && res.payload) || {};
-    const msgs = (Array.isArray(p.threads) ? p.threads : []).flatMap(th => Array.isArray(th.messages) ? th.messages : []);
+    const msgs = await gm.search(ALERT_Q, 50);
     const seen = new Set(state.synced || []), got = new Set();
     pending = [];
     for (const m of msgs){
@@ -1677,15 +1757,15 @@ async function syncAlerts(fromClick){
     } else syncMsg(fromClick ? 'No new purchases from your phone yet.' : '');
   } catch(e){
     const c = e && e.code;
-    const msg = c === 'server_not_connected' ? 'Add Gmail in claude.ai Settings → Connectors, then try again.'
+    const msg = gmailError(c) || (c === 'server_not_connected' ? 'Add Gmail in claude.ai Settings → Connectors, then try again.'
       : c === 'needs_reauth' ? 'Reconnect Gmail in claude.ai Settings → Connectors, then try again.'
       : c === 'selection_required' ? 'Choose which Gmail account to use when Claude asks, then try again.'
       : (c === 'not_in_manifest' || c === 'approval_required' || c === 'consent_required') ? 'Phone sync needs your OK to read Gmail. Tap Sync phone purchases and allow it.'
       : c === 'blocked_by_policy' ? 'Your account settings don’t allow this page to read Gmail.'
       : c === 'server_unavailable' ? 'Gmail didn’t answer. Try again in a minute.'
-      : 'Phone sync didn’t work this time. Try again.';
+      : 'Phone sync didn’t work this time. Try again.');
     if (fromClick) syncMsg(msg);
-  }
+  } finally { alertsBusy = false; }
 }
 function reviewDialog(){
   if (!pending.length) return;
@@ -1723,7 +1803,8 @@ function syncHelp(){
     <li>Trigger: <strong>Notification received</strong>, and pick your CIBC, TD and AMEX apps.</li>
     <li>Action: <strong>Send email</strong> to your Gmail, subject <strong>OMB |</strong> followed by the notification text.</li>
   </ol>
-  <p class="small" style="margin-top:10px">Then tap <strong>Sync phone purchases</strong>. Once you’ve allowed Gmail, new purchases show up each time you open this page.</p>`, 'Got it', () => {});
+  <p class="small" style="margin-top:10px">Then tap <strong>Sync phone purchases</strong>. Once you’ve allowed Gmail, new purchases show up each time you open this page.</p>
+  ${IN_CLAUDE ? '' : `<div class="btns"><button type="button" class="btn small primary" data-act="gs-setup">${gScript() ? 'Gmail connected: change' : 'Connect Gmail for the website'}</button></div>`}`, 'Got it', () => {});
 }
 
 /* Bills read from email */
@@ -1744,22 +1825,18 @@ function parseBillEmail(text){
   return {amount: m ? money(m[1]) : null, due: d ? mk(+d[3], +d[1], +d[2]) : d2 ? parseDate(d2[1]) : null};
 }
 async function syncBills(fromClick){
-  const mcp = await getMcp();
-  if (!mcp){ if (fromClick){ billNote = 'Bill emails can only be checked with this page open in Claude.'; render(); } return; }
+  const gm = await gmailApi();
+  if (!gm){ if (fromClick){ if (IN_CLAUDE){ billNote = 'Bill emails need Gmail connected in Claude.'; render(); } else gmailSetup(); } return; }
   if (fromClick){ billNote = 'Checking Gmail…'; render(); }
   state.billSeen = state.billSeen || [];
   const updated = [];
   try {
     for (const cfg of BILL_EMAILS){
       const bill = state.bills.find(b => b.id === cfg.billId); if (!bill) continue;
-      const res = await mcp.callTool('Gmail', 'search_threads', {query: cfg.query, pageSize: 5});
-      const p0 = (res && res.payload) || {};
-      const msgs = (Array.isArray(p0.threads) ? p0.threads : []).flatMap(th => Array.isArray(th.messages) ? th.messages : []).filter(m => m && m.id);
+      const msgs = (await gm.search(cfg.query, 5)).filter(m => m && m.id);
       const fresh = msgs.filter(m => !state.billSeen.includes(m.id));
       if (!fresh.length) continue;
-      const full = await mcp.callTool('Gmail', 'get_message', {messageId: fresh[0].id, messageFormat: 'PLAIN_TEXT'});
-      const p = (full && full.payload) || {};
-      const r = parseBillEmail((p.plaintextBody || '') + ' ' + (p.snippet || ''));
+      const r = parseBillEmail(await gm.body(fresh[0].id, cfg.query));
       fresh.forEach(m => state.billSeen.push(m.id));
       if (r.amount != null && r.amount > 0){
         bill.amount = r.amount;
@@ -1772,7 +1849,7 @@ async function syncBills(fromClick){
     if (updated.length){ logEntry('Bill from email: ' + updated.join('; ')); applyAutopays(); save(); }
     billNote = updated.length ? 'Updated from email: ' + updated.join('; ') + '.' : (fromClick ? 'No new bill emails.' : billNote);
   } catch(e){
-    if (fromClick) billNote = (e && e.code === 'server_not_connected') ? 'Add Gmail in claude.ai Settings → Connectors, then try again.' : 'Couldn’t check bill emails this time. Try again in a minute.';
+    if (fromClick) billNote = gmailError(e && e.code) || ((e && e.code === 'server_not_connected') ? 'Add Gmail in claude.ai Settings → Connectors, then try again.' : 'Couldn’t check bill emails this time. Try again in a minute.');
   }
   render();
 }
@@ -1899,6 +1976,7 @@ document.addEventListener('click', e => {
   if (a === 'add-tx') addTx();
   if (a === 'import') importDialog();
   if (a === 'sync') syncAlerts(true);
+  if (a === 'gs-setup'){ dlg.close(); setTimeout(gmailSetup, 50); }
   if (a === 'review') reviewDialog();
   if (a === 'sync-help') syncHelp();
   if (a === 'balance-check') balanceCheck();
