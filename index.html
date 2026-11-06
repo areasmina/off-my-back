@@ -206,6 +206,27 @@ dialog h3{font-size:1.2rem}
 .panel.row{display:flex}
 .lead{font-size:1.25rem;margin:2px 0 2px;line-height:1.25}
 .perday{text-align:right;display:grid}
+/* month calendar: one dot per thing happening that day */
+.calg{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-top:6px}
+.calg .dow{text-align:center;font-size:.72rem;color:var(--muted);padding-bottom:2px}
+.calg button{all:unset;box-sizing:border-box;cursor:pointer;border-radius:10px;min-height:44px;padding:5px 2px 4px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:3px;transition:background .2s}
+.calg button:hover,.calg button:focus-visible{background:var(--line)}
+.calg button.sel{background:var(--pine);color:var(--on-pine)}
+.calg button.today .dn{font-weight:800;color:var(--pine)}
+.calg button.sel .dn{color:var(--on-pine)}
+.calg button.past{opacity:.4}
+.calg .dn{font-size:.85rem}
+.calg .dots{display:flex;gap:2px;flex-wrap:wrap;justify-content:center;min-height:6px}
+.cdot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--muted)}
+.cdot.in{background:var(--good)}.cdot.out{background:var(--red)}.cdot.card{background:var(--slate);opacity:.6}.cdot.move{background:var(--mustard)}
+.calkey{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.8rem;color:var(--muted);margin:10px 0 4px}
+.calkey span{display:inline-flex;align-items:center;gap:5px}
+.caldetail{min-height:1.5em;animation:fadein .25s}
+/* the budget equation, written as a short sum */
+.eqrows li{padding:6px 0}
+.eqrows li.eqtot{border-top:2px solid var(--ink);font-weight:700}
+@keyframes fadein{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.caldetail{animation:none}.calg button{transition:none}}
 .perday .num{font-weight:700;font-size:1.2rem}
 .folds{display:grid;gap:8px;margin-top:14px}
 details.fold{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:0;overflow:hidden}
@@ -788,6 +809,65 @@ function forecastChart(fc){
     <circle class="dot ${fc.low < 0 ? 'bad' : ''}" cx="${x(lowPt.d)}" cy="${y(lowPt.bal)}" r="4"/>
     <text x="0" y="${H + 8}">Today</text><text x="${W}" y="${H + 8}" text-anchor="end">${dayLabel(isoDay(new Date(today().getTime() + fc.days * 864e5)))}</text></svg>`;
 }
+/* A month-style calendar of the next 5 weeks, with labelled dots. Tap a day to see what's on it. */
+let calEvents = [], calDay = null;
+function calendarFold(od){
+  const t0 = today(), tIso = isoDay(t0), start = new Date(t0.getFullYear(), t0.getMonth(), t0.getDate() - t0.getDay());
+  calEvents = upcomingEvents(35).map(e => ({...e, kind: e.amt > 0 ? 'in' : e.cheq ? 'out' : 'card'}));
+  if (od) calEvents.push({date: od.by, label: 'Move ' + fmt0.format(od.need) + ' into chequing', amt: 0, kind: 'move'});
+  calEvents.sort((a,b) => a.date.localeCompare(b.date));
+  if (!calDay || calDay < tIso) calDay = tIso;
+  let g = ['S','M','T','W','T','F','S'].map(d => `<span class="dow">${d}</span>`).join('');
+  for (let i = 0; i < 35; i++){
+    const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i), iso = isoDay(d), evs = calEvents.filter(e => e.date === iso);
+    g += `<button type="button" data-calday="${iso}" class="${iso === tIso ? 'today' : ''}${iso < tIso ? ' past' : ''}${iso === calDay ? ' sel' : ''}" aria-label="${weekdayLabel(iso)}${evs.length ? ', ' + evs.length + ' item' + (evs.length === 1 ? '' : 's') : ''}"><span class="dn">${d.getDate() === 1 || i === 0 ? d.toLocaleDateString('en-CA', {month:'short'}) + ' ' : ''}${d.getDate()}</span><span class="dots">${evs.slice(0, 4).map(e => `<i class="cdot ${e.kind}"></i>`).join('')}</span></button>`;
+  }
+  const key = `<div class="calkey"><span><i class="cdot in"></i>Payday</span><span><i class="cdot out"></i>Bill from chequing</span><span><i class="cdot card"></i>On a card</span>${od ? '<span><i class="cdot move"></i>Move money</span>' : ''}</div>`;
+  const hasBills = state.bills.some(b => b.payDay && n(b.amount)) || (state.recurring || []).some(r => r.payDay) || state.debts.some(d => d.payDay && n(d.balance) > 0);
+  return fold('home-cal', 'Calendar', 'Next 5 weeks', `<div class="calg">${g}</div>${key}<div class="caldetail" id="caldetail">${calDetail(calDay)}</div>
+    ${hasBills ? `<div class="btns" style="margin-top:6px"><button class="btn small" data-act="ics-bills">Add bill reminders to my calendar</button></div><p class="small muted">Saves a file your phone or computer calendar opens. Each bill repeats monthly with a reminder the day before.</p>` : ''}`, 'inline');
+}
+function calDetail(iso){
+  const evs = calEvents.filter(e => e.date === iso);
+  return `<p class="small muted" style="margin:6px 0 2px">${weekdayLabel(iso)}</p>` + (evs.length ? `<ul class="rows">${evs.map(e => `<li><span><i class="cdot ${e.kind}" style="margin-right:8px"></i>${esc(e.label)}${e.kind === 'card' ? ' <span class="small muted">(on card)</span>' : ''}</span><span class="r ${e.amt > 0 ? 'good' : ''}">${e.amt ? (e.amt > 0 ? '+' : '−') + fmt.format(Math.abs(e.amt)) : ''}</span></li>`).join('')}</ul>` : '<p class="small muted" style="margin:0">Nothing scheduled.</p>');
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-calday]'); if (!b) return;
+  calDay = b.dataset.calday;
+  document.querySelectorAll('[data-calday]').forEach(x => x.classList.toggle('sel', x === b));
+  const d = $('#caldetail'); if (d){ d.innerHTML = calDetail(calDay); d.style.animation = 'none'; void d.offsetWidth; d.style.animation = ''; }
+});
+/* Calendar files (.ics) that any phone or computer calendar can open. Free, no account. */
+const icsDate = iso => iso.replace(/-/g, '');
+const icsText = s => String(s).replace(/[\\,;]/g, m => '\\' + m).replace(/\n/g, '\\n');
+function icsFile(events){
+  const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Off My Back//EN', 'CALSCALE:GREGORIAN'];
+  events.forEach((e, i) => {
+    const next = new Date(e.date + 'T12:00:00'); next.setDate(next.getDate() + 1);
+    lines.push('BEGIN:VEVENT', `UID:omb-${icsDate(e.date)}-${i}-${Date.now()}@offmyback`, 'DTSTAMP:' + stamp, 'DTSTART;VALUE=DATE:' + icsDate(e.date), 'DTEND;VALUE=DATE:' + icsDate(isoDay(next)), 'SUMMARY:' + icsText(e.title));
+    if (e.rrule) lines.push('RRULE:' + e.rrule);
+    if (e.note) lines.push('DESCRIPTION:' + icsText(e.note));
+    lines.push('BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + icsText(e.title), 'TRIGGER:' + (e.alarm || '-PT15H'), 'END:VALARM', 'END:VEVENT');
+  });
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n');
+}
+function icsBills(){
+  const t = today(), first = day => { for (let k = 0; k < 2; k++){ const m = addMonths(t, k), d = new Date(m.getFullYear(), m.getMonth(), Math.min(day, new Date(m.getFullYear(), m.getMonth() + 1, 0).getDate())); if (d >= t) return isoDay(d); } };
+  const rule = day => 'FREQ=MONTHLY;BYMONTHDAY=' + (day >= 29 ? -1 : day);  // days 29 to 31 land on the last day of short months
+  const ev = [];
+  state.bills.forEach(b => { if (b.payDay && n(b.amount)) ev.push({date: first(b.payDay), title: `${b.name} ${b.source === 'card' ? '(on card) ' : ''}${fmt.format(n(b.amount))}`, rrule: rule(b.payDay)}); });
+  (state.recurring || []).forEach(r => { if (r.payDay && n(r.amount)) ev.push({date: first(r.payDay), title: `${r.name} (on card) ${fmt.format(n(r.amount))}`, rrule: rule(r.payDay)}); });
+  state.debts.forEach(d => { if (d.payDay && n(d.balance) > 0) ev.push({date: first(d.payDay), title: `${d.name} payment due`, rrule: rule(d.payDay), note: 'Pay at least the minimum.'}); });
+  if (!ev.length) return;
+  offerFile('off-my-back-bills.ics', icsFile(ev));
+}
+function icsMove(){
+  const od = state.chequing ? overdraft(forecast(30)) : null; if (!od) return;
+  offerFile('move-money-' + od.by + '.ics', icsFile([{date: od.by, title: `Move ${fmt0.format(od.need)} into chequing`, note: `${od.cause.label} on ${dayLabel(od.cause.date)} would take chequing below zero.`, alarm: '-PT0M'}]));
+}
+
 function spendStatus(){
   const key = ym(new Date()), mt = state.tx.filter(t => t.date.slice(0,7) === key);
   const vb = state.bills.filter(b => b.source === 'card');
@@ -851,7 +931,7 @@ function renderOverview(){
     const savedNote = saved >= od.need ? ` You have ${fmt0.format(saved)} in savings you could use.` : '';
     mood = 'bad'; verdict = `Move ${fmt0.format(od.need)} into chequing ${od.late ? 'today' : 'by ' + weekdayLabel(od.by)}`;
     why = `${esc(od.cause.label)} on ${dayLabel(od.cause.date)} would take chequing to ${fmtSigned(fc.low)}.${od.late ? '' : ' Moving it 2 business days early gives the transfer time to land.'}${savedNote}`;
-    act = `<div class="btns" style="margin-top:8px"><button class="btn small" data-act="cheq-update">I moved it: update balance</button></div>`;
+    act = `<div class="btns" style="margin-top:8px"><button class="btn small" data-act="cheq-update">I moved it: update balance</button>${od.late ? '' : '<button class="btn small" data-act="ics-move">Remind me</button>'}</div>`;
   }
   let h = `<div class="panel status ${mood}" style="margin-top:0"><span class="dot"></span><div><h3>${verdict}</h3><p class="small muted">${why}</p>${act}</div></div>`;
 
@@ -879,6 +959,7 @@ function renderOverview(){
       ${forecastChart(fc)}
       ${next.length ? `<ul class="rows" style="margin-top:8px">${next.map(row).join('')}</ul>` : '<p class="small muted">Nothing scheduled.</p>'}
       ${rest.length ? fold('home-30', 'Everything coming up', `${rest.length} more`, `<ul class="rows">${rest.map(row).join('')}</ul>`, 'inline') : ''}
+      ${calendarFold(od)}
     </div>`;
   } else {
     h += `<h2>Next 30 days</h2><div class="panel"><p class="small">Add your chequing balance to see where your money is headed, payday by payday.</p><div class="btns"><button class="btn primary small" data-act="cheq-update">Add chequing balance</button></div></div>`;
@@ -918,6 +999,11 @@ function leftToSpendPanel(){
       <div class="meter ${cls}" role="progressbar" aria-label="Everyday budget used" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${Math.min(100, pct)}%"></i></div>
       <p class="small muted">${fmt.format(spentV)} spent of ${fmt.format(planV)}</p>
       ${onDebt > 0.005 ? `<p class="small" style="color:var(--red)">${fmt.format(onDebt)} went on cards you’re paying off. That’s new debt.</p>` : ''}
+      ${(() => { const inc = paydaysIn(new Date(now.getFullYear(), now.getMonth(), 1)) * n(state.income.perCheque), fixed = billsTotal() - planV, debt = inc - fixed - planV;
+        const li = (l, v, sign, cls) => `<li${sign === '=' ? ' class="eqtot"' : ''}><span>${l}</span><span class="r num ${cls || ''}">${sign === '=' ? '' : sign + ' '}${fmt0.format(Math.abs(v))}</span></li>`;
+        return inc ? fold('home-eq', 'Where this comes from', `${fmt0.format(planV)} everyday budget`, `<ul class="rows eqrows">${li('Paycheques this month', inc, '')}${li('Fixed bills', fixed, '−')}${li('Everyday budgets', planV, '−')}${li(debt < 0 ? 'Short this month' : 'Left for debt', debt, '=', debt < 0 ? 'bad' : 'good')}</ul>
+          <ul class="rows eqrows" style="margin-top:10px">${li('Everyday budgets', planV, '')}${li('Spent so far', spentV, '−')}${li(left >= 0 ? 'Left to spend' : 'Over budget', left, '=', left < 0 ? 'bad' : '')}</ul>
+          <p class="small muted">Paycheques are the ones landing this month. Everyday is the total of your budgets paid by card, like groceries. Change them in Budget.</p>`, 'inline') : ''; })()}
       ${fold('home-cats', 'By budget', vb.filter(b => mt.some(t => t.cat === b.id && n(t.amount))).length + ' with spending', vb.map(b => catRow(b.name, mt.filter(t => t.cat === b.id).reduce((s,t) => s + t.amount, 0), n(b.amount))).join(''), 'inline')}
     </div>`;
     return h;
@@ -1237,7 +1323,7 @@ async function offerFile(filename, data){
   let dl = null;
   try { dl = (window.claude && claude.use) ? await claude.use('downloads') : null; } catch(e){}
   if (!dl && !IN_CLAUDE){
-    try { const url = URL.createObjectURL(new Blob([data], {type: /\.csv$/.test(filename) ? 'text/csv' : 'application/json'})); const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000); backupNote = 'Saved ' + filename + '.'; } catch(e){ backupNote = 'Couldn’t save the file this time. Try again.'; }
+    try { const url = URL.createObjectURL(new Blob([data], {type: /\.csv$/.test(filename) ? 'text/csv' : /\.ics$/.test(filename) ? 'text/calendar' : 'application/json'})); const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000); backupNote = 'Saved ' + filename + '.'; } catch(e){ backupNote = 'Couldn’t save the file this time. Try again.'; }
     render(); return;
   }
   if (!dl){ backupNote = 'Saving files only works with this page open in Claude.'; render(); return; }
@@ -1861,16 +1947,33 @@ function txForm(t){
   return `<div class="grid2"><div><label for="x-amt">Amount</label><input id="x-amt" name="amount" type="number" inputmode="decimal" step="0.01" required value="${t.amount ?? ''}"></div>
   <div><label for="x-date">Date</label><input id="x-date" name="date" type="date" required value="${esc(t.date)}"></div></div>
   <label for="x-time">Time <span class="muted small">(optional)</span></label><input id="x-time" name="time" type="time" value="${t.ts ? (d => String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'))(new Date(t.ts)) : ''}">
-  <label for="x-desc">Where or what</label><input id="x-desc" name="desc" value="${esc(t.desc)}" placeholder="No Frills">
+  <label for="x-desc">Where or what</label><input id="x-desc" name="desc" value="${esc(t.desc)}" placeholder="No Frills" list="x-places" autocomplete="off">
+  <datalist id="x-places">${placeList().map(p => `<option value="${esc(p)}">`).join('')}</datalist>
   <label for="x-cat">Category</label><select id="x-cat" name="cat">${categories().map(c => `<option value="${c.v}" ${c.v === t.cat ? 'selected' : ''}>${esc(c.l)}</option>`).join('')}</select>
   <label for="x-m">Paid with</label><select id="x-m" name="method">${methods().map(m => `<option value="${m.v}" ${m.v === t.method ? 'selected' : ''}>${esc(m.l)}</option>`).join('')}</select>
   <p class="hint" id="x-warn" style="color:var(--plum)">${esc(methodWarn(t.method))}</p>
   <p class="hint">Refund? Enter it as a negative amount.</p>`;
 }
+/* Places you've bought from, most used first, for autocomplete when logging. */
+function placeList(){
+  const c = {}; state.tx.forEach(t => { const d = String(t.desc || '').trim(); if (d && n(t.amount) > 0 && t.src !== 'bill') c[d] = (c[d] || 0) + 1; });
+  return Object.keys(c).sort((a,b) => c[b] - c[a] || a.localeCompare(b)).slice(0, 200);
+}
+/* The last purchase at a place: its category and how it was paid. */
+function lastAt(desc){
+  const k = String(desc || '').trim().toLowerCase(); if (!k) return null;
+  let best = null; state.tx.forEach(t => { if (String(t.desc || '').trim().toLowerCase() === k && (!best || t.date > best.date)) best = t; });
+  return best;
+}
 function wireTxForm(isNew){
-  let touched = !isNew;
+  let touched = !isNew, mTouched = !isNew;
   $('#x-cat').addEventListener('change', () => touched = true);
-  $('#x-desc').addEventListener('input', e => { if (!touched) $('#x-cat').value = guessCat(e.target.value); });
+  $('#x-desc').addEventListener('input', e => {
+    const last = lastAt(e.target.value);
+    if (!touched) $('#x-cat').value = last && categories().some(c => c.v === last.cat) ? last.cat : guessCat(e.target.value);
+    if (!mTouched && last && methods().some(m => m.v === last.method)){ $('#x-m').value = last.method; $('#x-warn').textContent = methodWarn(last.method); }
+  });
+  $('#x-m').addEventListener('change', () => mTouched = true);
   $('#x-m').addEventListener('change', e => { $('#x-warn').textContent = methodWarn(e.target.value); });
 }
 function readTx(fd, t){
@@ -2304,6 +2407,8 @@ document.addEventListener('click', e => {
   if (a === 'go-budget') setTab('budget');
   if (a === 'pay-pick') payDebt(null);
   if (a === 'spot-ok') spotDismiss(t.dataset.k);
+  if (a === 'ics-bills') icsBills();
+  if (a === 'ics-move') icsMove();
   if (t.dataset.pay) payDebt(t.dataset.pay);
   if (t.dataset.transfer) transfer(t.dataset.transfer);
   if (t.dataset.editDebt) editDebt(t.dataset.editDebt);
