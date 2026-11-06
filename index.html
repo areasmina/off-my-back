@@ -759,12 +759,22 @@ function cheqNow(){
 function forecast(days){
   const cq = cheqNow(); const start = cq ? cq.bal : 0;
   const events = upcomingEvents(days);
-  let bal = start, low = start, lowDate = isoDay(today());
+  let bal = start, low = start, lowDate = isoDay(today()), firstNeg = null;
   const pts = [{d:0, bal:start}], t0 = today();
-  events.forEach(e => { if (!e.cheq) return; const d = Math.round((new Date(e.date + 'T12:00:00') - t0) / 864e5); pts.push({d, bal}); bal += e.amt; pts.push({d, bal}); if (bal < low){ low = bal; lowDate = e.date; } });
+  events.forEach(e => { if (!e.cheq) return; const d = Math.round((new Date(e.date + 'T12:00:00') - t0) / 864e5); pts.push({d, bal}); bal += e.amt; pts.push({d, bal}); if (bal < low){ low = bal; lowDate = e.date; } if (bal < 0 && !firstNeg) firstNeg = e; });
   pts.push({d:days, bal});
-  return {start, end: bal, low, lowDate, pts, days, events: events.filter(e => e.cheq || e.amt > 0)};
+  return {start, end: bal, low, lowDate, firstNeg, pts, days, events: events.filter(e => e.cheq || e.amt > 0)};
 }
+/* n business days before a date (weekends skipped), so a transfer has time to land. */
+function bizBefore(iso, k){ const d = new Date(iso + 'T12:00:00'); while (k > 0){ d.setDate(d.getDate() - 1); const w = d.getDay(); if (w > 0 && w < 6) k--; } return isoDay(d); }
+/* If chequing would dip below zero: how much to move in, and by when. */
+function overdraft(fc){
+  if (!fc.firstNeg || fc.low >= 0) return null;
+  const need = Math.ceil(-fc.low / 5) * 5, tIso = isoDay(today());
+  let by = bizBefore(fc.firstNeg.date, 2); const late = by <= tIso; if (late) by = tIso;
+  return {need, by, late, cause: fc.firstNeg};
+}
+const weekdayLabel = iso => new Date(iso + 'T12:00:00').toLocaleDateString('en-CA', {weekday:'short', month:'short', day:'numeric'});
 function forecastChart(fc){
   const W = 320, H = 110, pad = 10;
   const vals = fc.pts.map(p => p.bal), max = Math.max(...vals, 0), min = Math.min(...vals, 0), span = (max - min) || 1;
@@ -834,11 +844,22 @@ function renderOverview(){
   if (sp.newDebt > 0.005) { mood = 'warn'; verdict = 'New charges on cards you’re paying off'; why = `${fmt.format(sp.newDebt)} this month. Use debit or your pay-in-full card instead.`; }
   if (cq && fc.low < 100) { mood = fc.low < 0 ? 'bad' : 'warn'; verdict = fc.low < 0 ? 'Chequing may go negative' : 'Chequing gets low'; why = `It could drop to ${fmt.format(fc.low)} around ${dayLabel(fc.lowDate)}. Keep debit spending light until payday.`; }
   if (sp.pct > 100.05) { mood = 'bad'; verdict = 'You’re over budget this month'; why = `${fmt.format(sp.spent - sp.plan)} over. That comes out of your debt money.`; }
-  let h = `<div class="panel status ${mood}" style="margin-top:0"><span class="dot"></span><div><h3>${verdict}</h3><p class="small muted">${why}</p></div></div>`;
+  /* Chequing going negative matters most, so it wins, and it says exactly what to do. */
+  const od = cq ? overdraft(fc) : null;
+  let act = '';
+  if (od){
+    const savedNote = saved >= od.need ? ` You have ${fmt0.format(saved)} in savings you could use.` : '';
+    mood = 'bad'; verdict = `Move ${fmt0.format(od.need)} into chequing ${od.late ? 'today' : 'by ' + weekdayLabel(od.by)}`;
+    why = `${esc(od.cause.label)} on ${dayLabel(od.cause.date)} would take chequing to ${fmtSigned(fc.low)}.${od.late ? '' : ' Moving it 2 business days early gives the transfer time to land.'}${savedNote}`;
+    act = `<div class="btns" style="margin-top:8px"><button class="btn small" data-act="cheq-update">I moved it: update balance</button></div>`;
+  }
+  let h = `<div class="panel status ${mood}" style="margin-top:0"><span class="dot"></span><div><h3>${verdict}</h3><p class="small muted">${why}</p>${act}</div></div>`;
 
   /* 2. Anything that needs you now */
   if (/^Added/.test(syncNote)) h += `<div class="panel move"><p>${esc(syncNote)}</p><div class="btns"><button class="btn" data-tab="spend">See purchases</button></div></div>`;
   if (pending.length) h += `<div class="panel move"><h3>${pending.length} new purchase${pending.length === 1 ? '' : 's'} from your phone</h3><div class="btns"><button class="btn primary" data-act="review">Review and add</button></div></div>`;
+  const dups = spotChecks().dups;
+  if (dups.length) h += `<div class="panel move"><h3>${dups.length === 1 ? 'Possible double charge' : dups.length + ' possible double charges'}</h3><p class="small">${dupLine(dups[0])}.</p><div class="btns"><button class="btn primary" data-tab="spend">Check it</button><button class="btn" data-act="spot-ok" data-k="${esc(dups[0].k)}">It’s fine</button></div></div>`;
   if (sim.shortfall) h += `<div class="panel alert"><h3>Your bills are more than your income</h3><p class="small">Some months don’t cover the minimums. Check your bills and income in Budget.</p></div>`;
 
   /* 3. Balances, Mint style: money you have in green, money you owe in red */
@@ -1729,6 +1750,54 @@ function donut(parts, total){
   const segs = parts.map(p => { const len = total ? p.v / total * C : 0; const seg = `<circle r="${R}" cx="70" cy="70" fill="none" stroke="${p.color}" stroke-width="18" stroke-dasharray="${Math.max(0, len - 2).toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}"/>`; off += len; return seg; }).join('');
   return `<svg class="donut" viewBox="0 0 140 140" role="img" aria-label="Spending by budget"><g transform="rotate(-90 70 70)"><circle r="${R}" cx="70" cy="70" fill="none" stroke="var(--line)" stroke-width="18"/>${segs}</g></svg>`;
 }
+/* Things worth a second look, worked out from your own purchases (no AI, nothing leaves the app):
+   the same charge twice, monthly charges you haven't listed as subscriptions, and repeat charges that went up. */
+const placeKey = s => String(s || '').toLowerCase().replace(/[^a-z& ]+/g, ' ').split(/\s+/).filter(w => w.length > 1).slice(0, 2).join(' ');
+const daysApart = (a, b) => Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 864e5);
+function spotChecks(){
+  const ok = new Set(state.dismissed || []), t0 = today();
+  const since = d => isoDay(new Date(t0.getFullYear(), t0.getMonth(), t0.getDate() - d));
+  const buys = state.tx.filter(t => n(t.amount) > 0 && placeKey(t.desc)).sort((a,b) => a.date.localeCompare(b.date));
+  // the same place and amount within 2 days
+  const dups = [], recent = buys.filter(t => t.date >= since(45)), used = new Set();
+  recent.forEach((a, i) => {
+    if (used.has(a.id) || n(a.amount) < 5) return;
+    const same = [a];
+    for (let j = i + 1; j < recent.length; j++){
+      const b = recent[j]; if (daysApart(same[same.length - 1].date, b.date) > 2) break;
+      if (Math.abs(n(a.amount) - n(b.amount)) < 0.005 && placeKey(a.desc) === placeKey(b.desc)){ same.push(b); used.add(b.id); }
+    }
+    if (same.length > 1){ const k = 'dup:' + same.map(t => t.id).join(':'); if (!ok.has(k)) dups.push({k, a, b: same[same.length - 1], times: same.length}); }
+  });
+  // one charge a month at about the same price
+  const known = new Set([...(state.recurring || []).map(r => placeKey(r.name)), ...state.bills.map(b => placeKey(b.name))].filter(Boolean));
+  const start = isoDay(addMonths(t0, -5)), groups = {};
+  buys.filter(t => t.date >= start).forEach(t => { const k = placeKey(t.desc); (groups[k] = groups[k] || []).push(t); });
+  const subs = [], ups = [];
+  Object.entries(groups).forEach(([k, items]) => {
+    const byM = {}; items.forEach(t => (byM[t.date.slice(0,7)] = byM[t.date.slice(0,7)] || []).push(n(t.amount)));
+    const ms = Object.keys(byM).sort();
+    if (ms.length < 2 || ms.some(m => byM[m].length > 1)) return;
+    const amts = ms.map(m => byM[m][0]), last = amts[amts.length - 1], prev = amts[amts.length - 2], before = amts.slice(0, -1);
+    const mid = [...before].sort((a,b) => a - b)[before.length >> 1];
+    if (!before.every(v => Math.abs(v - mid) <= Math.max(1, mid * 0.15))) return;
+    const name = items[items.length - 1].desc, lastM = ms[ms.length - 1];
+    if (last - prev >= Math.max(1, prev * 0.05) && last <= prev * 1.6 && lastM >= since(60).slice(0,7)){ const key = 'up:' + k + ':' + lastM; if (!ok.has(key)) ups.push({k:key, name, from:prev, to:last}); return; }
+    if (ms.length >= 3 && !known.has(k) && !items.some(t => t.src === 'bill') && Math.abs(last - mid) <= Math.max(1, mid * 0.15)){ const key = 'sub:' + k; if (!ok.has(key)) subs.push({k:key, name, amt:last, months:ms.length}); }
+  });
+  return {dups, subs, ups, count: dups.length + subs.length + ups.length};
+}
+const dupLine = d => `${esc(d.a.desc)} charged ${fmt.format(n(d.a.amount))} ${d.times === 2 ? 'twice' : d.times + ' times'}, ${d.a.date === d.b.date ? 'on ' + dayLabel(d.a.date) : dayLabel(d.a.date) + ' and ' + dayLabel(d.b.date)}`;
+function spotRows(sc){
+  const btn = (k, label) => `<button class="btn small" style="white-space:nowrap" data-act="spot-ok" data-k="${esc(k)}">${label}</button>`;
+  return `<ul class="rows">
+    ${sc.dups.map(d => `<li><span>${dupLine(d)}<br><span class="small muted">Same place, same amount. Check your statement.</span></span><span class="btns" style="margin:0;flex-wrap:nowrap"><button class="btn small" style="white-space:nowrap" data-tx="${esc(d.b.id)}">Open</button>${btn(d.k, 'It’s fine')}</span></li>`).join('')}
+    ${sc.ups.map(u => `<li><span>${esc(u.name)} went up<br><span class="small muted">${fmt.format(u.from)} → ${fmt.format(u.to)} (+${fmt.format(u.to - u.from)})</span></span>${btn(u.k, 'Got it')}</li>`).join('')}
+    ${sc.subs.map(s => `<li><span>${esc(s.name)}, every month<br><span class="small muted">${s.months} months in a row, about ${fmt.format(s.amt)}. A subscription you still use?</span></span>${btn(s.k, 'Keep it')}</li>`).join('')}
+  </ul>`;
+}
+function spotDismiss(k){ state.dismissed = [...new Set([...(state.dismissed || []), k])].slice(-300); save(); render(); toast('Got it. It won’t show again.'); }
+
 function renderSpend(){
   const el = $('#tab-spend');
   const months = [...new Set([ym(new Date()), ...state.tx.map(t => t.date.slice(0,7))])].sort().reverse();
@@ -1766,6 +1835,10 @@ function renderSpend(){
     const amt = debtSpend.reduce((s,t) => s + t.amount, 0);
     h += `<div class="panel alert"><h3>${fmt.format(amt)} of new debt</h3><p class="small">${[...new Set(debtSpend.map(t => debtOf(t).name))].map(esc).join(', ')} got new charges. Use debit or your pay-in-full card instead.</p></div>`;
   }
+
+  // worth a look: double charges, price increases, monthly charges you haven't listed
+  const sc = spotChecks();
+  if (sc.count) h += `<h2>Worth a look</h2><div class="panel">${spotRows(sc)}<p class="small muted" style="margin-top:8px">Spotted from your own purchases. Tap “It’s fine” and it won’t show again.</p></div>`;
 
   // budgets
   const row = c => { const b = state.bills.find(x => x.id === c.v); return catRow(c.l, byCat[c.v] || 0, b ? n(b.amount) : 0); };
@@ -2230,6 +2303,7 @@ document.addEventListener('click', e => {
   if (t.dataset.tx) editTx(t.dataset.tx);
   if (a === 'go-budget') setTab('budget');
   if (a === 'pay-pick') payDebt(null);
+  if (a === 'spot-ok') spotDismiss(t.dataset.k);
   if (t.dataset.pay) payDebt(t.dataset.pay);
   if (t.dataset.transfer) transfer(t.dataset.transfer);
   if (t.dataset.editDebt) editDebt(t.dataset.editDebt);
