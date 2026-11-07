@@ -283,7 +283,8 @@ details.fold.inline .fb{padding:6px 0 0}
 .chart .dot.pd{fill:var(--surface);stroke:var(--pine);stroke-width:2}
 .chart .base{fill:none;stroke:var(--muted);stroke-width:1.5;stroke-dasharray:5 5;opacity:.7}
 .legend.two{grid-template-columns:1fr 1fr;column-gap:16px}
-.dhead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:16px 0 8px}
+.dhead{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 10px;margin:16px 0 8px}
+.dsorts{display:flex;gap:6px;flex-wrap:wrap}
 .dhead .small{margin:0}
 .dsort{display:flex;background:var(--line);border-radius:10px;padding:3px;gap:3px}
 .dsort button{border:0;background:none;padding:5px 10px;border-radius:8px;font:inherit;font-weight:600;font-size:.82rem;color:var(--muted);cursor:pointer;transition:background .2s,color .2s}
@@ -707,9 +708,11 @@ function ensureDebtColors(){
   });
 }
 function debtColor(d){ const real = state.debts.find(x => x.id === d.id) || d; if (!(real.color >= 1)) ensureDebtColors(); return 'var(--c' + (real.color || 1) + ')'; }
-let debtSort = 'desc';
-try { if (localStorage.getItem('omb-debt-sort') === 'asc') debtSort = 'asc'; } catch(e){}
-const byDebtSort = (a,b) => debtSort === 'asc' ? n(a.balance) - n(b.balance) : n(b.balance) - n(a.balance);
+let debtSort = 'desc', debtBy = 'balance';
+try { if (localStorage.getItem('omb-debt-sort') === 'asc') debtSort = 'asc'; if (localStorage.getItem('omb-debt-by') === 'rate') debtBy = 'rate'; } catch(e){}
+/* Sort key: amount owed, or the interest rate that applies today (0% offers and pay-in-full cards count as 0). Ties fall back to balance. */
+const debtKey = d => debtBy === 'rate' ? (d.payInFull ? 0 : n(rateAt(d, new Date()))) : n(d.balance);
+const byDebtSort = (a,b) => { const dir = debtSort === 'asc' ? 1 : -1; return dir * (debtKey(a) - debtKey(b)) || dir * (n(a.balance) - n(b.balance)); };
 function rateLabel(d){ if (d.payInFull) return 'paid monthly'; if (d.inBudget) return n(d.apr) + '% loan'; if (d.promoEnd && promoActive(d, new Date())) return '0% now'; return rateAt(d, new Date()) + '%'; }
 function typeOf(d){ if (d.inBudget) return 'loan'; if (d.promoEnd && promoActive(d, new Date())) return 'promo'; return 'int'; }
 const typeName = {int:'Charging interest', promo:'0% for now', loan:'Loan in budget'};
@@ -929,7 +932,7 @@ function debtPill(shown, owe){
   const tot = sum(shown, d => n(d.balance)) || 1;
   return `<div class="panel" style="margin-top:0"><p class="muted small">You owe</p><div class="big-result num" data-count="${owe.toFixed(2)}">${fmt.format(owe)}</div>
     <div class="bar" role="img" aria-label="Your debts by size">${shown.map(d => `<span style="flex-grow:${n(d.balance)};background:${debtColor(d)}" title="${esc(d.name)}"></span>`).join('')}</div>
-    <div class="dhead"><p class="small muted">${shown.length} debt${shown.length === 1 ? '' : 's'}</p><div class="dsort" role="group" aria-label="Sort debts"><button data-dsort="desc" aria-pressed="${debtSort === 'desc'}">Highest first</button><button data-dsort="asc" aria-pressed="${debtSort === 'asc'}">Lowest first</button></div></div>
+    <div class="dhead"><p class="small muted">${shown.length} debt${shown.length === 1 ? '' : 's'}</p><div class="dsorts"><div class="dsort" role="group" aria-label="Sort by"><button data-dby="balance" aria-pressed="${debtBy === 'balance'}">Balance</button><button data-dby="rate" aria-pressed="${debtBy === 'rate'}">Interest</button></div><div class="dsort" role="group" aria-label="Order"><button data-dsort="desc" aria-pressed="${debtSort === 'desc'}">Highest</button><button data-dsort="asc" aria-pressed="${debtSort === 'asc'}">Lowest</button></div></div></div>
     <div class="dcards${shown.length > 3 ? ' more' : ''}">${shown.map(d => `<button class="dcard" style="--dc:${debtColor(d)}" data-goto-debt="${d.id}"><span class="nm">${esc(d.name)}</span><span class="amt num">${fmt0.format(n(d.balance))}</span><span class="pc">${n(d.balance) / tot < .01 ? '&lt;1%' : Math.round(n(d.balance) / tot * 100) + '%'} of total</span></button>`).join('')}</div>
     ${shown.length > 3 ? '<p class="small muted dcount">Swipe for the rest. Tap one to open it.</p>' : ''}</div>`;
 }
@@ -2510,8 +2513,9 @@ document.addEventListener('click', e => {
   if (t.dataset.pay) payDebt(t.dataset.pay);
   if (t.dataset.transfer) transfer(t.dataset.transfer);
   if (t.dataset.editDebt) editDebt(t.dataset.editDebt);
-  if (t.dataset.dsort && t.dataset.dsort !== debtSort){
-    debtSort = t.dataset.dsort; try { localStorage.setItem('omb-debt-sort', debtSort); } catch(err){}
+  if ((t.dataset.dsort && t.dataset.dsort !== debtSort) || (t.dataset.dby && t.dataset.dby !== debtBy)){
+    if (t.dataset.dsort) debtSort = t.dataset.dsort; else debtBy = t.dataset.dby;
+    try { localStorage.setItem('omb-debt-sort', debtSort); localStorage.setItem('omb-debt-by', debtBy); } catch(err){}
     render(); const row = document.querySelector('#tab-debts .dcards');
     if (row){ row.parentElement.classList.add('resort'); setTimeout(() => row.parentElement.classList.remove('resort'), 700); }
   }
