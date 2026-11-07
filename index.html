@@ -1826,6 +1826,8 @@ const DATA_FIXES = [{id:'bank-check-2026-11-07', run(){
   });
   // The $4.43 Google Cloud entry was the recurring estimate; Amex billed $1.27 that day, which is already logged.
   find('2026-11-01', 4.43, /google cloud/i, 'debt:amex').filter(t => t.src === 'bill').forEach(t => { applyTx(t, -1); state.tx = state.tx.filter(x => x !== t); });
+  // Google Cloud is pay-as-you-go: drop the recurring estimate and log each real charge as it comes in.
+  state.recurring = (state.recurring || []).filter(r => !(r.id === 'gcloud' || /google cloud/i.test(r.name || '')));
   // Amex shows two $8.00 Google Cloud charges on Nov 7.
   if (find('2026-11-07', 8, /google.*cloud/i, 'debt:amex', 1).length === 1) add({date:'2026-11-07', amount:8, desc:'GOOGLE CLOUD SERVICES', cat:catOr('subs'), method:'debt:amex'});
   // Dentist visit on the CIBC Visa (pending at the bank).
