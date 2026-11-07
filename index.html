@@ -490,12 +490,13 @@ async function init(){
   if (!IN_CLAUDE && SY){ try { const r = await cloudGet(SY.code); if (r && r.at > (SY.at || 0) && (!SY.dirty || r.at > (SY.editedAt || 0))){ loaded = r.data; LSX.set('offmyback', loaded); SY.at = r.at; SY.dirty = false; saveSY(); } setSyncState('ok'); } catch(e){ setSyncState('err'); } }
   if (!IN_CLAUDE && /^#sync\//.test(location.hash)){ const c = location.hash.slice(6); history.replaceState(null, '', location.pathname); setTimeout(() => linkCode(c), 0); }
   if (loaded) state = Object.assign(EMPTY(), loaded);
+  const fixChanged = applyDataFixes();
   if (state.startTotal == null && activeDebts().length) {
     state.startTotal = currentTotal(); state.startMonth = ym(new Date());
   }
   const autoChanged = applyAutopays();
   const snapChanged = ensureSnapshots();
-  if ((autoChanged || snapChanged) && store) save();
+  if ((fixChanged || autoChanged || snapChanged) && store) save();
   setSaveState(store ? 'Saved' : 'Not saved on this device');
   animateNext = true;
   render();
@@ -1807,6 +1808,48 @@ function learn(t){
   const k = normKey(t.desc); if (!k) return;
   state.rules[k] = t.cat;
   const ks = Object.keys(state.rules); if (ks.length > 400) delete state.rules[ks[0]];
+}
+/* One-time corrections after checking the app against the bank apps. Each fix runs once per data set
+   (its id goes in state.fixes) and only touches entries it can find, so running it on a second device is safe. */
+const DATA_FIXES = [{id:'bank-check-2026-11-07', run(){
+  const near = (a, b, days) => Math.abs(new Date(a + 'T12:00:00') - new Date(b + 'T12:00:00')) <= days * 864e5;
+  const find = (date, amt, re, meth, days = 0) => state.tx.filter(t => near(t.date, date, days) && Math.abs(t.amount - amt) < 0.005 && re.test(t.desc || '') && (!meth || t.method === meth));
+  const catOr = c => state.bills.some(b => b.id === c) ? c : 'other';
+  const setAmt = (t, amt) => { applyTx(t, -1); t.amount = amt; t.key = txKey(t.date, amt, t.desc); applyTx(t, 1); };
+  const add = o => { const t = Object.assign({id:id(), src:'manual'}, o); t.key = txKey(t.date, t.amount, t.desc); state.tx.push(t); applyTx(t, 1); };
+  // Amex charged $52.53 for the Walmart.ca order, not the $58.87 the order email said.
+  find('2026-11-05', 58.87, /walmart/i, 'debt:amex', 1).forEach(t => setAmt(t, 52.53));
+  // Chequing paid $9.82 at Wharncliffe Mini. The other $22.13 of the $31.95 was the Oct 30 bank fees, logged on their own below.
+  find('2026-11-02', 31.95, /wharncliffe/i, 'debit').forEach(t => setAmt(t, 9.82));
+  [[16.95, 'CIBC SERVICE CHARGE'], [5.00, 'CIBC OVER LIMIT FEE'], [0.18, 'CIBC OVERDRAFT INTEREST']].forEach(([amt, desc]) => {
+    if (!find('2026-10-30', amt, /service charge|over ?limit|overdraft/i, 'debit', 1).length) add({date:'2026-10-30', amount:amt, desc, cat:'other', method:'debit', affects:false});
+  });
+  // The $4.43 Google Cloud entry was the recurring estimate; Amex billed $1.27 that day, which is already logged.
+  find('2026-11-01', 4.43, /google cloud/i, 'debt:amex').filter(t => t.src === 'bill').forEach(t => { applyTx(t, -1); state.tx = state.tx.filter(x => x !== t); });
+  // Google Cloud is pay-as-you-go: drop the recurring estimate and log each real charge as it comes in.
+  state.recurring = (state.recurring || []).filter(r => !(r.id === 'gcloud' || /google cloud/i.test(r.name || '')));
+  // Amex shows two $8.00 Google Cloud charges on Nov 7.
+  if (find('2026-11-07', 8, /google.*cloud/i, 'debt:amex', 1).length === 1) add({date:'2026-11-07', amount:8, desc:'GOOGLE CLOUD SERVICES', cat:catOr('subs'), method:'debt:amex'});
+  // Dentist visit on the CIBC Visa (pending at the bank).
+  if (!find('2026-11-07', 141.30, /./, 'debt:visaplat', 2).length) add({date:'2026-11-07', amount:141.30, desc:'AL-JAHLAWI DENTISTRY', cat:catOr('care'), method:'debt:visaplat'});
+  // Google One is a subscription, like Google Cloud.
+  if (catOr('subs') === 'subs') find('2026-11-06', 15.24, /google.*one/i, null, 1).forEach(t => { t.cat = 'subs'; learn(t); });
+  // Card balances: what the bank showed on Nov 7 (posted only) plus the charges the app logged from Nov 6 on,
+  // which were still pending at the bank or came later. Skipped after Nov 10 so a later payment or autopay isn't undone.
+  if (isoDay(today()) <= '2026-11-10') [['visaplat', 327.54], ['amex', 308.11]].forEach(([did, posted]) => {
+    const d = state.debts.find(x => x.id === did); if (!d) return;
+    const later = state.tx.filter(t => t.method === 'debt:' + did && t.affects !== false && t.date >= '2026-11-06').reduce((s, t) => s + t.amount, 0);
+    d.balance = Math.round((posted + later) * 100) / 100;
+  });
+  if (state.snapshots && state.snapshots['2026-10'] && typeof monthReport === 'function') state.snapshots['2026-10'] = monthReport('2026-10');
+  logEntry('Matched transactions to the bank apps (Nov 7)');
+}}];
+function applyDataFixes(){
+  if (!state.debts.some(d => d.id === 'amex') || !state.debts.some(d => d.id === 'visaplat')) return false;
+  state.fixes = state.fixes || [];
+  let changed = false;
+  DATA_FIXES.forEach(f => { if (state.fixes.includes(f.id)) return; f.run(); state.fixes.push(f.id); changed = true; });
+  return changed;
 }
 function trimTx(){
   const cutoff = ym(addMonths(new Date(), -12));
