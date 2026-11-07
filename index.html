@@ -22,6 +22,7 @@
   --on-pine:#FFFFFF; --red:#c8452f; --good:#23915a;
   --w:#c9a227; --u:#2f6fd0; --b:#5b4a6e; --r:#c8452f; --g:#2e8a52;
   --c1:#2f6fd0; --c2:#c8452f; --c3:#c9a227; --c4:#2e8a52; --c5:#5b4a6e; --c6:#d07a2a; --c7:#2f95ab; --c8:#8a93a3;
+  --c9:#c2457e; --c10:#5f8f1c; --c11:#4a52c8; --c12:#8a5a3a; --c13:#9b3fb8; --c14:#1f9a8a;
   color-scheme: light;
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
@@ -35,6 +36,7 @@
     --on-pine:#0f1522; --red:#f07a63; --good:#5ccf8f;
     --w:#e0bd4a; --u:#6fa3ff; --b:#a993c6; --r:#f07a63; --g:#5cc488;
     --c1:#6fa3ff; --c2:#f07a63; --c3:#e0bd4a; --c4:#5cc488; --c5:#a993c6; --c6:#f0a060; --c7:#6ccfe0; --c8:#a8b0bc;
+  --c9:#f07ab0; --c10:#a8d65a; --c11:#9aa0ff; --c12:#c9a07a; --c13:#d38ae8; --c14:#5fd6c4;
     color-scheme: dark;
   }
 }
@@ -45,6 +47,7 @@
   --on-pine:#0f1522; --red:#f07a63; --good:#5ccf8f;
   --w:#e0bd4a; --u:#6fa3ff; --b:#a993c6; --r:#f07a63; --g:#5cc488;
   --c1:#6fa3ff; --c2:#f07a63; --c3:#e0bd4a; --c4:#5cc488; --c5:#a993c6; --c6:#f0a060; --c7:#6ccfe0; --c8:#a8b0bc;
+  --c9:#f07ab0; --c10:#a8d65a; --c11:#9aa0ff; --c12:#c9a07a; --c13:#d38ae8; --c14:#5fd6c4;
   color-scheme: dark;
 }
 .pips{display:flex;gap:6px;margin-bottom:12px}.pips span{width:12px;height:12px;border-radius:50%}
@@ -280,6 +283,32 @@ details.fold.inline .fb{padding:6px 0 0}
 .chart .dot.pd{fill:var(--surface);stroke:var(--pine);stroke-width:2}
 .chart .base{fill:none;stroke:var(--muted);stroke-width:1.5;stroke-dasharray:5 5;opacity:.7}
 .legend.two{grid-template-columns:1fr 1fr;column-gap:16px}
+.dhead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:16px 0 8px}
+.dhead .small{margin:0}
+.dsort{display:flex;background:var(--line);border-radius:10px;padding:3px;gap:3px}
+.dsort button{border:0;background:none;padding:5px 10px;border-radius:8px;font:inherit;font-weight:600;font-size:.82rem;color:var(--muted);cursor:pointer;transition:background .2s,color .2s}
+.dsort button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.dcards{display:grid;grid-auto-flow:column;grid-auto-columns:calc((100% - 16px) / 3);gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;padding:2px 0}
+.dcards::-webkit-scrollbar{display:none}
+.dcards.more{-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent);mask-image:linear-gradient(90deg,#000 88%,transparent)}
+.dcards.more.end{-webkit-mask-image:none;mask-image:none}
+.dcard{scroll-snap-align:start;display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0;text-align:left;font:inherit;color:inherit;cursor:pointer;background:color-mix(in srgb,var(--dc) 12%,var(--surface));border:1px solid color-mix(in srgb,var(--dc) 40%,var(--line));border-top:4px solid var(--dc);border-radius:12px;padding:10px 10px 11px;transition:transform .12s ease}
+.dcard:active{transform:scale(.97)}
+.dcard .nm{font-size:.84rem;line-height:1.25;color:var(--muted);width:100%;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.5em}
+.dcard .amt{font-weight:700;font-size:1.05rem;font-variant-numeric:tabular-nums}
+.dcard .pc{font-size:.75rem;color:var(--muted)}
+.dcount{text-align:center;margin:8px 0 0}
+.dtag{display:inline-flex;align-items:center;gap:5px;max-width:100%;padding:0 7px 0 5px;border-radius:99px;font-weight:600;color:var(--ink);background:color-mix(in srgb,var(--dc) 20%,transparent);vertical-align:baseline}
+.dtag i{width:8px;height:8px;border-radius:50%;background:var(--dc);flex:none}
+.tx .d span.dtag{display:inline-flex;vertical-align:1px;line-height:1.5}
+.tx .av{position:relative}
+.tx .av .dot{position:absolute;right:-2px;bottom:-2px;width:13px;height:13px;border-radius:50%;background:var(--dc);border:2px solid var(--surface)}
+.cpick{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 10px}
+.cpick label{margin:0;cursor:pointer}
+.cpick input{position:absolute;opacity:0;pointer-events:none}
+.cpick span{display:block;width:28px;height:28px;border-radius:50%;background:var(--dc);box-shadow:inset 0 0 0 2px rgba(0,0,0,.08)}
+.cpick input:checked + span{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--ink)}
+.cpick input:focus-visible + span{outline:2px solid var(--pine);outline-offset:3px}
 .btns.three{display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:8px}.btns.three .btn{padding-left:6px;padding-right:6px;white-space:nowrap}
 .mswitch{display:flex;align-items:center;justify-content:space-between;margin:0 0 12px;font-weight:700;font-size:1.05rem}
 .mswitch .icon{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:1.4rem;line-height:1;cursor:pointer}
@@ -380,6 +409,8 @@ nav.tabs button{transition:color .2s,border-color .2s}
   .enter > *:nth-child(2){animation-delay:.05s} .enter > *:nth-child(3){animation-delay:.1s} .enter > *:nth-child(4){animation-delay:.15s} .enter > *:nth-child(5){animation-delay:.2s} .enter > *:nth-child(n+6){animation-delay:.25s}
   :is(.enter,.fresh) :is(.pbar i,.meter i,.split span){animation:grow .9s cubic-bezier(.2,.8,.2,1) both;transform-origin:left}
   .enter .bar span{animation:grow .9s cubic-bezier(.2,.8,.2,1) both;transform-origin:left}
+  .resort .dcard{animation:rise .35s cubic-bezier(.2,.8,.2,1) both}
+  .resort .dcard:nth-child(2){animation-delay:.04s} .resort .dcard:nth-child(3){animation-delay:.08s} .resort .dcard:nth-child(n+4){animation-delay:.12s}
   dialog[open]{animation:sheet .3s cubic-bezier(.2,.9,.3,1) both}
   dialog[open]::backdrop{animation:fade .3s ease both}
 }
@@ -664,7 +695,21 @@ function simulate(extra){
 }
 
 /* ---------- render ---------- */
-function debtColor(d){ const i = state.debts.findIndex(x => x.id === d.id); return 'var(--c' + ((i < 0 ? 0 : i) % 8 + 1) + ')'; }
+/* Every debt keeps its own colour (state.debts[].color = slot 1-14). Early debts keep the colour they always had. */
+const DEBT_SLOTS = 14;
+function ensureDebtColors(){
+  const used = new Set(state.debts.filter(d => d.color >= 1 && d.color <= DEBT_SLOTS).map(d => d.color));
+  state.debts.forEach((d, i) => {
+    if (d.color >= 1 && d.color <= DEBT_SLOTS) return;
+    let c = i < 8 && !used.has(i + 1) ? i + 1 : 0;
+    for (let k = 1; !c && k <= DEBT_SLOTS; k++) if (!used.has(k)) c = k;
+    d.color = c || (i % DEBT_SLOTS) + 1; used.add(d.color);
+  });
+}
+function debtColor(d){ const real = state.debts.find(x => x.id === d.id) || d; if (!(real.color >= 1)) ensureDebtColors(); return 'var(--c' + (real.color || 1) + ')'; }
+let debtSort = 'desc';
+try { if (localStorage.getItem('omb-debt-sort') === 'asc') debtSort = 'asc'; } catch(e){}
+const byDebtSort = (a,b) => debtSort === 'asc' ? n(a.balance) - n(b.balance) : n(b.balance) - n(a.balance);
 function rateLabel(d){ if (d.payInFull) return 'paid monthly'; if (d.inBudget) return n(d.apr) + '% loan'; if (d.promoEnd && promoActive(d, new Date())) return '0% now'; return rateAt(d, new Date()) + '%'; }
 function typeOf(d){ if (d.inBudget) return 'loan'; if (d.promoEnd && promoActive(d, new Date())) return 'promo'; return 'int'; }
 const typeName = {int:'Charging interest', promo:'0% for now', loan:'Loan in budget'};
@@ -707,6 +752,7 @@ function toast(msg){
 }
 
 function render(){
+  ensureDebtColors();
   const grp = GROUP[tab] || tab;
   document.querySelectorAll('nav.tabs button[data-tab]').forEach(b => b.setAttribute('aria-current', b.dataset.tab === grp ? 'page' : 'false'));
   TABS.forEach(t => $('#tab-'+t).hidden = t !== tab);
@@ -731,7 +777,7 @@ function segHtml(t){
 const TIPS = {
   overview: 'A quick look at your money: how you’re doing, your balances (green is money you have, red is what you owe), and what’s coming in the next 30 days.',
   spend: 'Log what you spend here. Each budget bar turns yellow when it’s nearly used up and red when you go over.',
-  debts: 'Everything you owe, biggest first. Tap a debt to log a payment or edit it. Payoff plan shows when each one is gone.',
+  debts: 'Everything you owe. Swipe the cards sideways and sort them highest or lowest first. Tap a debt to log a payment or edit it. Payoff plan shows when each one is gone.',
   budget: 'Your paycheques, bills and savings. Tick bills off as they’re paid. Whatever is left goes to your debts.'
 };
 let seenTips = LSX.get('omb-tips', {});
@@ -879,9 +925,13 @@ function spendStatus(){
 }
 /* The pill: every debt as one labelled bar. */
 function debtPill(shown, owe){
+  shown = shown.slice().sort(byDebtSort);
+  const tot = sum(shown, d => n(d.balance)) || 1;
   return `<div class="panel" style="margin-top:0"><p class="muted small">You owe</p><div class="big-result num" data-count="${owe.toFixed(2)}">${fmt.format(owe)}</div>
     <div class="bar" role="img" aria-label="Your debts by size">${shown.map(d => `<span style="flex-grow:${n(d.balance)};background:${debtColor(d)}" title="${esc(d.name)}"></span>`).join('')}</div>
-    <ul class="legend two">${shown.map(d => `<li><span class="sw" style="background:${debtColor(d)}"></span><span class="ln">${esc(d.name)}</span><span class="amt">${fmt0.format(n(d.balance))}</span></li>`).join('')}</ul></div>`;
+    <div class="dhead"><p class="small muted">${shown.length} debt${shown.length === 1 ? '' : 's'}</p><div class="dsort" role="group" aria-label="Sort debts"><button data-dsort="desc" aria-pressed="${debtSort === 'desc'}">Highest first</button><button data-dsort="asc" aria-pressed="${debtSort === 'asc'}">Lowest first</button></div></div>
+    <div class="dcards${shown.length > 3 ? ' more' : ''}">${shown.map(d => `<button class="dcard" style="--dc:${debtColor(d)}" data-goto-debt="${d.id}"><span class="nm">${esc(d.name)}</span><span class="amt num">${fmt0.format(n(d.balance))}</span><span class="pc">${n(d.balance) / tot < .01 ? '&lt;1%' : Math.round(n(d.balance) / tot * 100) + '%'} of total</span></button>`).join('')}</div>
+    ${shown.length > 3 ? '<p class="small muted dcount">Swipe for the rest. Tap one to open it.</p>' : ''}</div>`;
 }
 
 function homeData(){
@@ -1225,7 +1275,7 @@ function renderBudget(){
 function renderDebts(){
   const el = $('#tab-debts');
   const hd = activeDebts().length ? homeData() : null;
-  const debts = state.debts.slice().sort((a,b) => (a.payInFull - b.payInFull) || (n(b.balance) - n(a.balance)));
+  const debts = state.debts.slice().sort((a,b) => ((n(a.balance) <= 0) - (n(b.balance) <= 0)) || byDebtSort(a,b));
   const maxBal = Math.max(1, ...debts.map(d => n(d.balance)));
   let h = (state.debts.length && state.lastCheck !== ym(new Date())) ? `<div class="panel warn row" style="margin-top:0"><div><h3>Time for your monthly check</h3><p class="small muted">Type in each balance from your bank app. Takes 2 minutes and keeps the plan accurate.</p></div><button class="btn primary small" data-act="balance-check">Start</button></div>` : '';
   const due = state.debts.length && state.lastCheck !== ym(new Date());
@@ -1269,6 +1319,8 @@ function renderDebts(){
   const log = state.log.slice(-12).reverse();
   if (log.length) h += `<div class="folds" style="margin-top:14px">` + fold('recent', 'Recent activity', log.length + ' items', `<ul class="rows">${log.map(l => `<li><span>${esc(l.text)}<br><span class="small muted">${esc(l.date)}</span></span><span class="r">${l.amount ? fmt.format(l.amount) : ''}</span></li>`).join('')}</ul>`) + `</div>`;
   el.innerHTML = h;
+  const row = el.querySelector('.dcards');
+  if (row){ const edge = () => row.classList.toggle('end', row.scrollLeft + row.clientWidth >= row.scrollWidth - 4); row.addEventListener('scroll', edge, {passive:true}); edge(); }
 }
 
 /* ---------- upcoming payments ---------- */
@@ -1689,12 +1741,15 @@ function debtForm(d){
   <label class="check"><input type="checkbox" name="autoFull" ${d.autoFull ? 'checked' : ''}> Autopay pays the full balance, not just the minimum</label>
   <p class="hint">With autopay on, the tracker lowers this balance and your chequing on that day. With it off, the payment shows in your upcoming list as a reminder.</p>
   <label class="check"><input type="checkbox" name="payInFull" ${d.payInFull ? 'checked' : ''}> I pay this card in full every month</label>
-  <label for="f-note">Note</label><input id="f-note" name="note" value="${esc(d.note)}">`;
+  <label for="f-note">Note</label><input id="f-note" name="note" value="${esc(d.note)}">
+  <label>Colour</label><div class="cpick" role="radiogroup" aria-label="Colour">${Array.from({length:DEBT_SLOTS}, (_, i) => i + 1).map(c => `<label title="Colour ${c}"><input type="radio" name="color" value="${c}" ${(d.color || 0) === c ? 'checked' : ''}><span style="--dc:var(--c${c})"></span></label>`).join('')}</div>
+  <p class="hint">Used for this debt everywhere: the bar, its card and the tag on its charges.</p>`;
 }
 function readDebt(fd, d){
   Object.assign(d, {name: fd.get('name').trim() || 'Debt', balance: n(fd.get('balance')), minPay: n(fd.get('minPay')), apr: n(fd.get('apr')),
     promoEnd: fd.get('promoEnd') || '', postApr: fd.get('postApr') === '' ? null : n(fd.get('postApr')),
     inBudget: !!fd.get('inBudget'), payDay: (n(fd.get('payDay')) >= 1 ? Math.min(31, Math.round(n(fd.get('payDay')))) : null), autopay: !!fd.get('autopay'), autoFull: !!fd.get('autoFull'), payInFull: !!fd.get('payInFull'), note: fd.get('note').trim()});
+  if (n(fd.get('color')) >= 1) d.color = Math.min(DEBT_SLOTS, Math.round(n(fd.get('color'))));
   if (d.payDay && !d.lastAuto && d.payDay <= new Date().getDate()) d.lastAuto = isoDay(today());
   return d;
 }
@@ -1976,8 +2031,8 @@ function renderSpend(){
     ${idle.length ? fold('spend-idle', 'No spending yet', `${idle.length} budget${idle.length === 1 ? '' : 's'}`, idle.map(row).join(''), 'inline') : ''}</div>`;
   // transactions, Mint style: tap a row to edit or delete
   h += `<h2>Transactions</h2><div class="panel">${list.length ? `<div class="txlist">${list.map((t, i) => (i === 0 || list[i-1].date !== t.date ? `<div class="dayhead">${new Date(t.date + 'T12:00:00').toLocaleDateString('en-CA',{weekday:'long', month:'short', day:'numeric'})}</div>` : '') +
-      `<button class="tx" data-tx="${t.id}"><span class="av" style="background:${colorOf(t.cat)}">${esc((t.desc || '?').trim().charAt(0).toUpperCase())}</span>
-        <span class="d"><span class="nm">${esc(t.desc)}</span><span class="small muted">${esc(catLabel(t.cat))} · ${esc(methodLabel(t.method))}${t.ts ? ' · ' + new Date(t.ts).toLocaleTimeString('en-CA',{hour:'numeric',minute:'2-digit'}) : ''}</span></span>
+      `<button class="tx" data-tx="${t.id}"><span class="av" style="background:${colorOf(t.cat)}">${esc((t.desc || '?').trim().charAt(0).toUpperCase())}${debtOf(t) ? `<span class="dot" style="--dc:${debtColor(debtOf(t))}"></span>` : ''}</span>
+        <span class="d"><span class="nm">${esc(t.desc)}</span><span class="small muted">${debtOf(t) ? `<span class="dtag" style="--dc:${debtColor(debtOf(t))}"><i></i>${esc(debtOf(t).name)}</span> ${esc(catLabel(t.cat))}` : `${esc(catLabel(t.cat))} · ${esc(methodLabel(t.method))}`}${t.ts ? ' · ' + new Date(t.ts).toLocaleTimeString('en-CA',{hour:'numeric',minute:'2-digit'}) : ''}</span></span>
         <span class="r ${t.amount < 0 ? 'good' : ''}">${t.amount < 0 ? '+' + fmt.format(-t.amount) : fmt.format(t.amount)}</span></button>`).join('')}</div>
       <p class="small muted" style="margin-top:8px">Tap a transaction to change it or delete it.</p>`
     : `<p class="muted">Log a tap, a cash purchase or a debit payment, or import a file from your bank’s website.</p>`}</div>`;
@@ -2455,6 +2510,15 @@ document.addEventListener('click', e => {
   if (t.dataset.pay) payDebt(t.dataset.pay);
   if (t.dataset.transfer) transfer(t.dataset.transfer);
   if (t.dataset.editDebt) editDebt(t.dataset.editDebt);
+  if (t.dataset.dsort && t.dataset.dsort !== debtSort){
+    debtSort = t.dataset.dsort; try { localStorage.setItem('omb-debt-sort', debtSort); } catch(err){}
+    render(); const row = document.querySelector('#tab-debts .dcards');
+    if (row){ row.parentElement.classList.add('resort'); setTimeout(() => row.parentElement.classList.remove('resort'), 700); }
+  }
+  if (t.dataset.gotoDebt){
+    const f = document.querySelector(`[data-fold="debt-${t.dataset.gotoDebt}"]`);
+    if (f){ f.open = true; f.scrollIntoView({behavior: reduceMotion() ? 'auto' : 'smooth', block:'center'}); }
+  }
   if (t.dataset.editBill) editBill(t.dataset.editBill);
 });
 document.addEventListener('change', e => {
