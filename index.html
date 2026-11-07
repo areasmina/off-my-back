@@ -1834,6 +1834,13 @@ const DATA_FIXES = [{id:'bank-check-2026-11-07', run(){
   if (!find('2026-11-07', 141.30, /./, 'debt:visaplat', 2).length) add({date:'2026-11-07', amount:141.30, desc:'AL-JAHLAWI DENTISTRY', cat:catOr('care'), method:'debt:visaplat'});
   // Google One is a subscription, like Google Cloud.
   if (catOr('subs') === 'subs') find('2026-11-06', 15.24, /google.*one/i, null, 1).forEach(t => { t.cat = 'subs'; learn(t); });
+  // Card balances: what the bank showed on Nov 7 (posted only) plus the charges the app logged from Nov 6 on,
+  // which were still pending at the bank or came later. Skipped after Nov 10 so a later payment or autopay isn't undone.
+  if (isoDay(today()) <= '2026-11-10') [['visaplat', 327.54], ['amex', 308.11]].forEach(([did, posted]) => {
+    const d = state.debts.find(x => x.id === did); if (!d) return;
+    const later = state.tx.filter(t => t.method === 'debt:' + did && t.affects !== false && t.date >= '2026-11-06').reduce((s, t) => s + t.amount, 0);
+    d.balance = Math.round((posted + later) * 100) / 100;
+  });
   if (state.snapshots && state.snapshots['2026-10'] && typeof monthReport === 'function') state.snapshots['2026-10'] = monthReport('2026-10');
   logEntry('Matched transactions to the bank apps (Nov 7)');
 }}];
